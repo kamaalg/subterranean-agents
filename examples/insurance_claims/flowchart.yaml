@@ -1,0 +1,427 @@
+name: insurance_claims
+description: >
+  Intake, validate, triage, and resolve a first-notice-of-loss auto insurance
+  claim end to end. This is the paper's complex (55-node) procedure with many
+  branches: coverage verification, fraud screening, repair vs total-loss paths,
+  injury and liability handling, and several escalation and abandonment exits.
+start: greet
+
+nodes:
+  greet:
+    role: agent
+    prompt: |
+      Greet the policyholder, identify yourself as the claims team, express that
+      you are here to help, and ask them to describe what happened. One question
+      per turn.
+    next: [collect_policy_number]
+
+  collect_policy_number:
+    role: agent
+    prompt: |
+      Ask for the policy number (or enough identifying detail to look it up).
+      Acknowledge anything they already shared before asking.
+    next: [verify_policy]
+
+  verify_policy:
+    role: decision
+    next:
+      - to: confirm_identity
+        when: a policy number or sufficient identifying detail was provided
+      - to: collect_policy_number
+        when: no usable policy identifier has been provided yet
+      - to: no_policy_found
+        when: the caller says they have no policy or it cannot exist
+
+  confirm_identity:
+    role: agent
+    prompt: |
+      Verify the caller's identity at a high level (name, address on file,
+      contact). Do not request full payment-card or SSN digits. Confirm you have
+      located the right policy.
+    next: [check_policy_active]
+
+  check_policy_active:
+    role: decision
+    next:
+      - to: collect_incident_basics
+        when: the policy is active and in good standing
+      - to: policy_lapsed
+        when: the policy is lapsed, cancelled, or unpaid
+
+  collect_incident_basics:
+    role: agent
+    prompt: |
+      Collect the basics of the incident: date, time, and location of the loss.
+      Acknowledge each fact before asking the next.
+    next: [collect_incident_type]
+
+  collect_incident_type:
+    role: agent
+    prompt: |
+      Ask what kind of incident it was (collision, theft, weather/comprehensive,
+      vandalism, glass-only). Confirm your understanding back to them.
+    next: [classify_incident]
+
+  classify_incident:
+    role: decision
+    next:
+      - to: collision_details
+        when: the incident is a collision involving one or more vehicles
+      - to: theft_details
+        when: the vehicle or its contents were stolen
+      - to: comprehensive_details
+        when: the loss is weather, fire, vandalism, animal, or glass-only
+      - to: collect_incident_type
+        when: the incident type is still unclear
+
+  collision_details:
+    role: agent
+    prompt: |
+      Gather collision specifics: number of vehicles, speed and direction,
+      point of impact, and whether the vehicle is drivable. One item per turn.
+    next: [check_injuries]
+
+  theft_details:
+    role: agent
+    prompt: |
+      Gather theft specifics: what was stolen, whether a police report was filed
+      and its number, and whether the vehicle was recovered.
+    next: [check_injuries]
+
+  comprehensive_details:
+    role: agent
+    prompt: |
+      Gather comprehensive-loss specifics: cause (hail, flood, fire, animal,
+      vandalism), extent of damage, and whether the vehicle is safe to operate.
+    next: [check_injuries]
+
+  check_injuries:
+    role: decision
+    next:
+      - to: collect_injury_details
+        when: any person was injured in the incident
+      - to: check_third_party
+        when: no injuries are reported
+
+  collect_injury_details:
+    role: agent
+    prompt: |
+      Express concern, then gather injury details carefully: who was hurt, the
+      nature of the injuries, and whether medical care was sought. Be empathetic.
+    next: [open_injury_subclaim]
+
+  open_injury_subclaim:
+    role: agent
+    prompt: |
+      Explain that you are opening a separate injury sub-claim and that a bodily
+      injury adjuster will follow up. Capture preferred contact details.
+    next: [check_third_party]
+
+  check_third_party:
+    role: decision
+    next:
+      - to: collect_third_party_info
+        when: another party or vehicle was involved
+      - to: assess_liability
+        when: only the policyholder's vehicle was involved
+
+  collect_third_party_info:
+    role: agent
+    prompt: |
+      Collect third-party details: other driver's name, insurer and policy number
+      if known, vehicle description, and any witness contacts.
+    next: [assess_liability]
+
+  assess_liability:
+    role: decision
+    next:
+      - to: collect_police_report
+        when: liability is disputed, shared, or unclear
+      - to: collect_damage_photos
+        when: liability is clear and undisputed
+
+  collect_police_report:
+    role: agent
+    prompt: |
+      Ask whether a police report was filed; if so, capture the report number and
+      filing department. Explain why it helps resolve disputed liability.
+    next: [collect_damage_photos]
+
+  collect_damage_photos:
+    role: agent
+    prompt: |
+      Ask the policyholder to describe (and, if on a channel that supports it,
+      upload) photos of the damage from multiple angles. Confirm what you have.
+    next: [verify_coverage]
+
+  verify_coverage:
+    role: decision
+    next:
+      - to: explain_collision_coverage
+        when: the loss type is covered and a deductible applies (collision/comprehensive)
+      - to: explain_liability_only
+        when: the policy is liability-only and this loss is not covered
+      - to: coverage_question
+        when: coverage applicability is genuinely ambiguous and needs review
+
+  coverage_question:
+    role: agent
+    prompt: |
+      Explain the specific coverage question plainly, set expectations that a
+      coverage review is needed, and tell them what happens next.
+    next: [coverage_review_decision]
+
+  coverage_review_decision:
+    role: decision
+    next:
+      - to: explain_collision_coverage
+        when: on review the loss is determined to be covered
+      - to: explain_liability_only
+        when: on review the loss is determined not to be covered
+      - to: escalate_coverage
+        when: the determination requires an underwriter or supervisor
+
+  explain_liability_only:
+    role: agent
+    prompt: |
+      Gently explain that this loss is not covered under a liability-only policy,
+      what that means for them, and any next steps (e.g. third-party claim).
+    next: [offer_alternatives]
+
+  offer_alternatives:
+    role: decision
+    next:
+      - to: explain_third_party_route
+        when: the policyholder may recover from a third party's insurer
+      - to: claim_not_covered
+        when: there is no viable recovery route and the caller accepts this
+      - to: escalate_dispute
+        when: the policyholder disputes the non-coverage decision
+
+  explain_third_party_route:
+    role: agent
+    prompt: |
+      Explain how to pursue the at-fault party's insurer, what information they
+      will need, and offer to share the details you have collected.
+    next: [confirm_no_payout]
+
+  confirm_no_payout:
+    role: agent
+    prompt: |
+      Confirm that no payout will be issued on this policy for this loss, restate
+      the third-party route, and close supportively.
+    next: [resolved_no_payout]
+
+  explain_collision_coverage:
+    role: agent
+    prompt: |
+      Confirm the loss is covered, state the applicable deductible, and explain
+      how the claim payment will work at a high level.
+    next: [fraud_screen]
+
+  fraud_screen:
+    role: decision
+    next:
+      - to: estimate_damage
+        when: nothing about the claim raises fraud concerns
+      - to: fraud_review
+        when: there are inconsistencies or red flags that warrant a closer look
+
+  fraud_review:
+    role: agent
+    prompt: |
+      Calmly ask clarifying questions to resolve the inconsistencies. Do not
+      accuse. Note what was clarified.
+    next: [fraud_decision]
+
+  fraud_decision:
+    role: decision
+    next:
+      - to: estimate_damage
+        when: the concerns were satisfactorily resolved
+      - to: refer_siu
+        when: concerns remain and the claim needs the special investigations unit
+
+  refer_siu:
+    role: agent
+    prompt: |
+      Explain neutrally that the claim is being referred for further review,
+      avoid accusatory language, and set expectations for follow-up.
+    next: [escalated_fraud]
+
+  estimate_damage:
+    role: agent
+    prompt: |
+      Explain how the damage estimate will be produced (inspection, approved shop,
+      or photo estimate) and gather the policyholder's preference.
+    next: [assess_total_loss]
+
+  assess_total_loss:
+    role: decision
+    next:
+      - to: total_loss_path
+        when: repair cost likely exceeds the vehicle's value (total loss)
+      - to: repair_path
+        when: the vehicle is economically repairable
+
+  repair_path:
+    role: agent
+    prompt: |
+      Explain the repair process: choosing an approved shop, rental coverage if
+      applicable, and the deductible. Confirm their preferred shop.
+    next: [schedule_repair]
+
+  schedule_repair:
+    role: agent
+    prompt: |
+      Help schedule the inspection/repair and arrange a rental if covered. Confirm
+      dates and what to bring.
+    next: [confirm_repair_plan]
+
+  confirm_repair_plan:
+    role: agent
+    prompt: |
+      Summarise the full repair plan, the deductible, the rental arrangement, and
+      the claim number. Ask if anything is unclear.
+    next: [final_questions]
+
+  total_loss_path:
+    role: agent
+    prompt: |
+      Sensitively explain the vehicle is likely a total loss, how actual cash
+      value is determined, and what the settlement process looks like.
+    next: [explain_settlement]
+
+  explain_settlement:
+    role: agent
+    prompt: |
+      Walk through the settlement: valuation basis, deductible, lienholder payoff
+      if any, and how/when funds are disbursed.
+    next: [settlement_response]
+
+  settlement_response:
+    role: user
+    prompt: |
+      React in the policyholder's voice to the total-loss settlement explanation:
+      accept, ask questions, or dispute the valuation.
+    next: [evaluate_settlement]
+
+  evaluate_settlement:
+    role: decision
+    next:
+      - to: confirm_settlement
+        when: the policyholder accepts the settlement terms
+      - to: explain_settlement
+        when: the policyholder has questions but is engaged
+      - to: escalate_dispute
+        when: the policyholder disputes the valuation and wants a review
+
+  confirm_settlement:
+    role: agent
+    prompt: |
+      Confirm the accepted settlement, restate the amount and timing, capture
+      disbursement details, and give the claim number.
+    next: [final_questions]
+
+  final_questions:
+    role: agent
+    prompt: |
+      Ask whether they have any remaining questions about the claim, deductible,
+      timeline, or next steps.
+    next: [closing_decision]
+
+  closing_decision:
+    role: decision
+    next:
+      - to: wrap_up
+        when: the policyholder has no further questions and is satisfied
+      - to: final_questions
+        when: the policyholder has more questions to work through
+      - to: escalate_dispute
+        when: the policyholder is dissatisfied and wants to dispute or escalate
+
+  wrap_up:
+    role: agent
+    prompt: |
+      Recap the claim outcome and next steps, give the claim number and adjuster
+      contact, thank them, and close warmly.
+    next: [claim_filed]
+
+  escalate_coverage:
+    role: agent
+    prompt: |
+      Explain that an underwriter/supervisor will review the coverage question,
+      give a reference number, and set a follow-up expectation.
+    next: [escalated_coverage]
+
+  escalate_dispute:
+    role: agent
+    prompt: |
+      Acknowledge the dispute respectfully, explain the formal review/appeal
+      process, capture their position, and give a reference number.
+    next: [escalated_dispute]
+
+  policy_lapsed:
+    role: agent
+    prompt: |
+      Explain that the policy appears lapsed/cancelled so the loss may not be
+      covered, describe reinstatement or next steps, and offer to connect billing.
+    next: [lapsed_decision]
+
+  lapsed_decision:
+    role: decision
+    next:
+      - to: transfer_billing
+        when: the caller wants to resolve the lapse with billing
+      - to: claim_not_covered
+        when: the caller accepts the loss is not covered and disengages
+
+  transfer_billing:
+    role: agent
+    prompt: |
+      Explain you are transferring them to billing to resolve the lapse, summarise
+      the situation for the handoff, and set expectations.
+    next: [escalated_billing]
+
+  no_policy_found:
+    role: agent
+    prompt: |
+      Explain that no matching policy can be found, suggest what to check, and
+      offer to route them to new-business or general support.
+    next: [no_policy_decision]
+
+  no_policy_decision:
+    role: decision
+    next:
+      - to: collect_policy_number
+        when: the caller realises they have more details to provide
+      - to: abandoned_no_policy
+        when: the caller has no policy with us and ends the call
+
+  claim_filed:
+    terminal: success
+  resolved_no_payout:
+    terminal: success
+  claim_not_covered:
+    terminal: abandonment
+  abandoned_no_policy:
+    terminal: abandonment
+  escalated_coverage:
+    terminal: escalation
+  escalated_dispute:
+    terminal: escalation
+  escalated_fraud:
+    terminal: escalation
+  escalated_billing:
+    terminal: escalation
+
+scenario_variables:
+  incident_types: [collision, theft, comprehensive, vandalism, glass_only]
+  coverage_levels: [full_coverage, collision_only, liability_only, comprehensive_only]
+  vehicle_makes: [Toyota, Ford, Honda, Tesla, BMW, Subaru, Jeep]
+  vehicle_value_range: [2000, 60000]
+  deductible_options: [250, 500, 1000, 2000]
+  injuries_present: [true, false]
+  third_party_involved: [true, false]
+  fraud_flags: [none, minor_inconsistency, prior_claim_pattern]
+  user_styles: [calm, distressed, angry, anxious, businesslike, confused]

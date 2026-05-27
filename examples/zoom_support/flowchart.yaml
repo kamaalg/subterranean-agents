@@ -1,0 +1,116 @@
+name: zoom_support
+description: Triage and resolve a Zoom customer-support request end to end.
+start: greet
+
+nodes:
+  greet:
+    role: agent
+    prompt: |
+      Warmly greet the customer, identify yourself as Zoom support, and ask what
+      problem they are running into today. One question per turn.
+    next: [collect_issue]
+
+  collect_issue:
+    role: agent
+    prompt: |
+      Gather the specifics of the issue: what they were trying to do, what
+      happened instead, their platform (desktop/web/mobile), and the Zoom client
+      version if known. Acknowledge each detail before asking the next thing.
+    next:
+      - to: classify_issue
+
+  classify_issue:
+    role: decision
+    next:
+      - to: troubleshoot_audio_video
+        when: the problem is about audio, video, or device hardware
+      - to: troubleshoot_connectivity
+        when: the problem is about joining, connection drops, or network
+      - to: handle_account_billing
+        when: the problem is about the account, login, or billing
+      - to: collect_issue
+        when: the issue is still too vague to classify
+
+  troubleshoot_audio_video:
+    role: agent
+    prompt: |
+      Walk the customer through audio/video checks one step at a time: correct
+      device selected, OS permissions granted, and a test call. Wait for the
+      result of each step before suggesting the next.
+    next: [check_resolved]
+
+  troubleshoot_connectivity:
+    role: agent
+    prompt: |
+      Walk the customer through connectivity checks: switching networks, checking
+      firewall/VPN, and rejoining the meeting. Confirm the result of each step.
+    next: [check_resolved]
+
+  handle_account_billing:
+    role: agent
+    prompt: |
+      Help with the account or billing question: verify identity at a high level,
+      explain the relevant plan or setting, and describe the fix. Do not ask for
+      full payment-card numbers.
+    next: [check_resolved]
+
+  check_resolved:
+    role: user
+    prompt: |
+      React in the customer's voice to the troubleshooting so far: say whether the
+      problem is fixed, still happening, or whether something new came up.
+    next: [evaluate_outcome]
+
+  evaluate_outcome:
+    role: decision
+    next:
+      - to: confirm_resolution
+        when: the customer confirms the issue is resolved
+      - to: deep_dive
+        when: the issue persists and warrants more troubleshooting
+      - to: escalate_check
+        when: the customer is frustrated or the issue is beyond standard steps
+
+  deep_dive:
+    role: agent
+    prompt: |
+      Collect diagnostic detail (logs, exact error text, reproduction steps) and
+      try one targeted advanced fix appropriate to the issue category.
+    next: [check_resolved]
+
+  escalate_check:
+    role: decision
+    next:
+      - to: collect_issue
+        when: the customer wants to keep trying with support
+      - to: escalate_to_tier2
+        when: the issue needs a specialist or the customer asks for one
+      - to: unresolved
+        when: the customer disengages or declines to continue
+
+  confirm_resolution:
+    role: agent
+    prompt: |
+      Confirm the issue is resolved, summarise what fixed it, share one prevention
+      tip, and close warmly.
+    next: [resolved]
+
+  escalate_to_tier2:
+    role: agent
+    prompt: |
+      Explain that you are creating a Tier-2 ticket, summarise the diagnostics
+      gathered, give the ticket reference, and set follow-up expectations.
+    next: [escalated]
+
+  resolved:
+    terminal: success
+  escalated:
+    terminal: escalation
+  unresolved:
+    terminal: abandonment
+
+scenario_variables:
+  platforms: [Windows, macOS, iOS, Android, Linux, Web]
+  issue_categories: [audio, video, connectivity, account, billing]
+  client_versions: ["5.17.0", "5.16.10", "6.0.2", unknown]
+  user_styles: [calm, frustrated, non_technical, technical, in_a_hurry]

@@ -1,0 +1,19 @@
+{
+  "name": "subterranean-train-3b",
+  "description": "Fine-tune the 3B path (Qwen2.5-3B-Instruct) on a single GPU.",
+  "imageName": "runpod/pytorch:2.3.0-py3.11-cuda12.1.1-devel-ubuntu22.04",
+  "gpuTypeId": "NVIDIA A40",
+  "gpuCount": 1,
+  "cloudType": "SECURE",
+  "containerDiskInGb": 60,
+  "volumeInGb": 100,
+  "volumeMountPath": "/workspace",
+  "ports": "22/tcp",
+  "env": {
+    "SUBTERRANEAN_EXAMPLE": "travel",
+    "SUBTERRANEAN_BASE_MODEL": "Qwen/Qwen2.5-3B-Instruct",
+    "SUBTERRANEAN_EPOCHS": "20",
+    "HF_HOME": "/workspace/hf"
+  },
+  "dockerArgs": "bash -lc 'cd /workspace && bash setup.sh train'"
+}

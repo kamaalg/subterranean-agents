@@ -1,0 +1,23 @@
+# Virtualenvs
+.venv/
+venv/
+
+# Build artifacts (subterranean compile/generate/train output)
+build/
+dist/
+*.egg-info/
+
+# mkdocs build output
+site/
+
+# Python caches
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS
+.DS_Store

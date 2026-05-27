@@ -1,0 +1,99 @@
+name: travel_booking
+description: Help a customer plan and book a trip end to end.
+start: greet
+
+nodes:
+  greet:
+    role: agent
+    prompt: |
+      Warmly greet the customer and ask what they need help with today.
+    next: [gather_preferences]
+
+  gather_preferences:
+    role: agent
+    prompt: |
+      Ask about destination, dates, budget, and group size. One question per turn;
+      acknowledge what they already told you before asking the next thing.
+    next:
+      - to: assess_readiness
+
+  assess_readiness:
+    role: decision
+    next:
+      - to: present_options
+        when: user has provided destination, dates, budget, and group size
+      - to: gather_preferences
+        when: one or more required details are still missing
+
+  present_options:
+    role: agent
+    prompt: |
+      Present 2-3 concrete travel options that match the stated preferences and
+      budget. Summarise price, dates, and what is included for each.
+    next: [handle_response]
+
+  handle_response:
+    role: user
+    prompt: |
+      React to the presented options in the customer's voice.
+    next: [evaluate_response]
+
+  evaluate_response:
+    role: decision
+    next:
+      - to: book
+        when: the customer clearly chose one of the options
+      - to: refine_options
+        when: the customer wants different or adjusted options
+      - to: abandon_check
+        when: the customer is hesitant, stalling, or unhappy
+
+  refine_options:
+    role: agent
+    prompt: |
+      Acknowledge the feedback and adjust the search (cheaper, different dates,
+      different destination) before presenting again.
+    next: [present_options]
+
+  abandon_check:
+    role: decision
+    next:
+      - to: gather_preferences
+        when: the customer wants to keep going with changes
+      - to: escalate_to_human
+        when: the customer is frustrated and wants a human
+      - to: abandoned
+        when: the customer disengages or declines to continue
+
+  book:
+    role: agent
+    prompt: |
+      Collect the final details needed to book the chosen option (traveller names,
+      contact email). Confirm the total price before proceeding.
+    next: [confirm]
+
+  confirm:
+    role: agent
+    prompt: |
+      Confirm the booking is complete, restate the key details, and give next steps.
+    next: [booking_confirmed]
+
+  escalate_to_human:
+    role: agent
+    prompt: |
+      Apologise, explain you are handing off to a human agent, and set expectations
+      for follow-up.
+    next: [escalated]
+
+  booking_confirmed:
+    terminal: success
+  abandoned:
+    terminal: abandonment
+  escalated:
+    terminal: escalation
+
+scenario_variables:
+  destination_pool: [Japan, Italy, Iceland, Portugal, Thailand, Peru, Morocco]
+  budget_range: [500, 5000]
+  group_size_range: [1, 6]
+  user_styles: [decisive, indecisive, skeptical, enthusiastic, budget_conscious]

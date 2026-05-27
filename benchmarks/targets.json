@@ -1,0 +1,54 @@
+{
+  "_comment": "Single source of truth for the paper's reproduction targets (Dennis et al. 2026a, arXiv:2605.22502v1). Read by the e2e regression gate (tests/e2e) and documented in benchmarks/README.md. Per-criterion means are Subterranean (compiled) scores, n=200. tol is the >5% regression gate from the spec.",
+  "tolerance": 0.05,
+  "paper": "arXiv:2605.22502v1",
+  "examples": {
+    "travel_booking": {
+      "model": "Qwen/Qwen2.5-3B-Instruct",
+      "size": "3b",
+      "epochs": 20,
+      "train_convos": 1912,
+      "total_convos": 2125,
+      "criteria": {
+        "Task Success": 4.11,
+        "Information Accuracy": 4.75,
+        "Consistency": 4.34,
+        "Graceful Handling": 4.07,
+        "Naturalness": 4.12
+      },
+      "cost_per_conversation_usd": 0.0010,
+      "cost_ratio_vs_in_context": 128
+    },
+    "zoom_support": {
+      "model": "Qwen/Qwen3-8B",
+      "size": "8b",
+      "epochs": 10,
+      "train_convos": 6264,
+      "criteria": {
+        "Task Success": 4.50,
+        "Information Accuracy": 4.26,
+        "Consistency": 4.42,
+        "Graceful Handling": 4.62,
+        "Naturalness": 4.87
+      },
+      "cost_per_conversation_usd": 0.0003,
+      "cost_ratio_vs_in_context": 296
+    },
+    "insurance_claims": {
+      "model": "Qwen/Qwen3-8B",
+      "size": "8b",
+      "epochs": 20,
+      "train_convos": 2700,
+      "total_convos": 3000,
+      "criteria": {
+        "Task Success": 4.47,
+        "Information Accuracy": 4.40,
+        "Consistency": 4.51,
+        "Graceful Handling": 4.81,
+        "Naturalness": 4.92
+      },
+      "cost_per_conversation_usd": 0.0007,
+      "cost_ratio_vs_in_context": 462
+    }
+  }
+}

@@ -1,0 +1,154 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "subterranean-agents"
+version = "0.1.0.dev0"
+description = "Compile agentic workflows into LLM weights: fine-tune procedures directly into small models so they self-orchestrate."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Subterranean Agents contributors" }]
+keywords = ["llm", "agents", "fine-tuning", "distillation", "langgraph"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "pydantic>=2.6",
+    "pyyaml>=6.0",
+    "typer>=0.12",
+    "rich>=13.7",
+    "loguru>=0.7",
+    "anthropic>=0.40",
+    "scipy>=1.12",
+    "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+train = [
+    "torch>=2.3",
+    "transformers>=4.44",
+    "trl>=0.9",
+    "datasets>=2.20",
+    "accelerate>=0.33",
+    "deepspeed>=0.14",
+    "bitsandbytes>=0.43",
+]
+cloud = [
+    "modal>=0.64",
+]
+serve = [
+    "vllm>=0.5",
+]
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+]
+report = [
+    # PDF eval report rendering (bar charts + cost breakdown). Imported lazily so
+    # the eval modules import and unit-test without it installed.
+    "matplotlib>=3.8",
+]
+openai = [
+    # OpenAI-compatible client for talking to a served compiled model and the
+    # optional GPT-4 judge. Imported lazily; not required for unit tests.
+    "openai>=1.40",
+]
+dev = [
+    "pytest>=8.2",
+    "pytest-asyncio>=0.23",
+    "pytest-mock>=3.14",
+    "pytest-cov>=5.0",
+    "syrupy>=4.6",
+    "ruff>=0.5",
+    "black>=24.4",
+    "mypy>=1.10",
+    "types-PyYAML>=6.0",
+    "commitizen>=3.27",
+    "langgraph>=0.2",
+]
+
+[project.scripts]
+subterranean = "subterranean.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/subterranean-agents/subterranean"
+Documentation = "https://subterranean-agents.github.io/subterranean"
+Repository = "https://github.com/subterranean-agents/subterranean"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/subterranean"]
+
+# ----------------------------------------------------------------------------
+# Tooling
+# ----------------------------------------------------------------------------
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4", "RUF"]
+ignore = ["E501"]  # line length handled by black/formatter
+
+[tool.ruff.lint.isort]
+known-first-party = ["subterranean"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unreachable = true
+plugins = ["pydantic.mypy"]
+files = ["src/subterranean"]
+
+[[tool.mypy.overrides]]
+# Optional-extra deps that ship no/poor stubs; only imported behind extras.
+module = [
+    "trl.*",
+    "transformers.*",
+    "datasets.*",
+    "accelerate.*",
+    "deepspeed.*",
+    "vllm.*",
+    "modal.*",
+    "langgraph.*",
+    "torch.*",
+    "matplotlib.*",
+    "openai.*",
+    "scipy.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "integration: hits the real Anthropic API with a tiny budget (nightly CI)",
+    "e2e: full pipeline reproduction (release candidates)",
+]
+addopts = "-ra --strict-markers"
+
+[tool.coverage.run]
+source = ["subterranean"]
+branch = true
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.1.0.dev0"
+version_files = ["pyproject.toml:^version"]
+tag_format = "v$version"
+update_changelog_on_bump = true
+changelog_incremental = true
+major_version_zero = true
