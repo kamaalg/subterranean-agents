@@ -45,31 +45,44 @@ _IGNORE = [
 ]
 
 
-def _local_install_image(extra: str) -> modal.Image:
-    """Build an image that pip-installs the local source with ``[extra]`` extras."""
-    return (
-        modal.Image.debian_slim(python_version="3.11")
-        .add_local_dir(
-            _REPO_ROOT,
-            remote_path=_REMOTE_SRC,
-            copy=True,
-            ignore=_IGNORE,
-        )
-        .run_commands(
-            "pip install --upgrade pip",
-            f"pip install -e '{_REMOTE_SRC}[{extra}]'",
-        )
+#: CUDA base image used for GPU steps. ``-devel`` is required so ``nvcc`` is
+#: present — DeepSpeed compiles CUDA ops at import time and ``-runtime`` lacks
+#: the toolkit, which silently shows up as ``MissingCUDAException`` deep inside
+#: TRL/accelerate the first time a trainer is constructed.
+_CUDA_BASE = "nvidia/cuda:12.4.1-devel-ubuntu22.04"
+
+
+def _local_install_image(extra: str, *, gpu: bool) -> modal.Image:
+    """Build an image that pip-installs the local source with ``[extra]`` extras.
+
+    Args:
+        extra: pyproject extras group to install (``report``/``train``/``serve``).
+        gpu: When True, base on the CUDA devel image so DeepSpeed/bitsandbytes/vLLM
+            can compile their CUDA ops; when False, use the lean Debian Slim base.
+    """
+    if gpu:
+        base = modal.Image.from_registry(_CUDA_BASE, add_python="3.11")
+    else:
+        base = modal.Image.debian_slim(python_version="3.11")
+    return base.add_local_dir(
+        _REPO_ROOT,
+        remote_path=_REMOTE_SRC,
+        copy=True,
+        ignore=_IGNORE,
+    ).run_commands(
+        "pip install --upgrade pip",
+        f"pip install -e '{_REMOTE_SRC}[{extra}]'",
     )
 
 
 #: CPU image for the API-bound generate/evaluate steps (core + anthropic + matplotlib).
-CPU_IMAGE = _local_install_image("report")
+CPU_IMAGE = _local_install_image("report", gpu=False)
 
-#: Training image: the heavy ML stack (torch/trl/deepspeed/bitsandbytes).
-TRAIN_IMAGE = _local_install_image("train")
+#: Training image: heavy ML stack (torch/trl/deepspeed/bitsandbytes) on CUDA devel.
+TRAIN_IMAGE = _local_install_image("train", gpu=True)
 
-#: Serving image: vLLM (CUDA/Linux only).
-SERVE_IMAGE = _local_install_image("serve")
+#: Serving image: vLLM on CUDA devel (vLLM requires CUDA/Linux).
+SERVE_IMAGE = _local_install_image("serve", gpu=True)
 
 #: Persisted build artifacts (flowchart IR, dataset.jsonl, eval reports).
 BUILD_VOLUME = modal.Volume.from_name("subterranean-build", create_if_missing=True)
