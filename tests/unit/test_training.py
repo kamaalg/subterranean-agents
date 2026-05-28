@@ -25,6 +25,7 @@ from subterranean.training.deepspeed import ZERO3_CONFIG_PATH
 from subterranean.training.launch import build_accelerate_command
 from subterranean.training.trainer import (
     CheckpointInfo,
+    _adapt_sft_kwargs,
     check_divergence,
     is_diverged,
     load_jsonl,
@@ -294,3 +295,63 @@ def test_train_raises_helpful_error_without_ml_stack(
     cfg = TrainingConfig.for_3b(str(tmp_path / "model"))
     with pytest.raises(RuntimeError, match=r"\[train\]"):
         trainer.train(cfg, dataset)
+
+
+# --------------------------------------------------------------------------- #
+# SFT kwarg adaptation across TRL versions                                     #
+# --------------------------------------------------------------------------- #
+
+
+class _OldSFTConfig:
+    """Simulates TRL <0.12 — accepts the legacy ``max_seq_length`` field."""
+
+    def __init__(
+        self,
+        output_dir: str,
+        num_train_epochs: int = 1,
+        max_seq_length: int = 4096,
+    ) -> None:  # pragma: no cover - constructed via _adapt_sft_kwargs probe
+        pass
+
+
+class _NewSFTConfig:
+    """Simulates TRL >=0.12 — ``max_seq_length`` was renamed to ``max_length``."""
+
+    def __init__(
+        self,
+        output_dir: str,
+        num_train_epochs: int = 1,
+        max_length: int = 4096,
+    ) -> None:  # pragma: no cover
+        pass
+
+
+class _MinimalSFTConfig:
+    """Simulates a hypothetical TRL where the option was dropped entirely."""
+
+    def __init__(self, output_dir: str, num_train_epochs: int = 1) -> None:  # pragma: no cover
+        pass
+
+
+def test_adapt_passes_through_when_kwarg_accepted() -> None:
+    kw = _adapt_sft_kwargs(
+        _OldSFTConfig,
+        {"output_dir": "out", "num_train_epochs": 3, "max_seq_length": 2048},
+    )
+    assert kw == {"output_dir": "out", "num_train_epochs": 3, "max_seq_length": 2048}
+
+
+def test_adapt_renames_to_new_synonym() -> None:
+    kw = _adapt_sft_kwargs(
+        _NewSFTConfig,
+        {"output_dir": "out", "num_train_epochs": 3, "max_seq_length": 2048},
+    )
+    assert kw == {"output_dir": "out", "num_train_epochs": 3, "max_length": 2048}
+
+
+def test_adapt_drops_unknown_kwarg_with_warning(caplog: pytest.LogCaptureFixture) -> None:
+    kw = _adapt_sft_kwargs(
+        _MinimalSFTConfig,
+        {"output_dir": "out", "num_train_epochs": 3, "max_seq_length": 2048},
+    )
+    assert kw == {"output_dir": "out", "num_train_epochs": 3}

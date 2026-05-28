@@ -20,6 +20,7 @@ Only :func:`train` touches the GPU stack; it is exercised end-to-end on Modal
 
 from __future__ import annotations
 
+import inspect
 import json
 import math
 import random
@@ -235,6 +236,39 @@ def _checkpoints_from_log_history(log_history: list[dict[str, Any]]) -> list[Che
     return out
 
 
+#: Renames between historical and current ``SFTConfig`` kwarg names. When a key
+#: on the left isn't accepted by the installed TRL, fall back to the key on the
+#: right if that one is accepted. Lets the same TrainingConfig work across TRL
+#: 0.9 (``max_seq_length``) and TRL 0.12+ (``max_length``).
+_SFT_KWARG_RENAMES: dict[str, str] = {
+    "max_seq_length": "max_length",
+}
+
+
+def _adapt_sft_kwargs(sft_config_cls: type, kwargs: dict[str, Any]) -> dict[str, Any]:
+    """Filter / rename ``kwargs`` to match the installed ``SFTConfig`` signature.
+
+    TRL has renamed and removed kwargs across releases (e.g. ``max_seq_length``
+    moved to ``max_length`` in 0.12). Rather than pinning a TRL version we
+    introspect ``SFTConfig.__init__`` and adapt: rename known synonyms when the
+    target name is accepted, drop kwargs the installed version no longer knows
+    about (with a logged warning so the drop is visible).
+    """
+    accepted = set(inspect.signature(sft_config_cls).parameters)
+    adapted: dict[str, Any] = {}
+    for key, value in kwargs.items():
+        if key in accepted:
+            adapted[key] = value
+            continue
+        renamed = _SFT_KWARG_RENAMES.get(key)
+        if renamed and renamed in accepted:
+            adapted[renamed] = value
+            logger.debug(f"SFTConfig: renamed kwarg '{key}' -> '{renamed}'")
+            continue
+        logger.warning(f"SFTConfig: dropping unsupported kwarg '{key}'")
+    return adapted
+
+
 def _require_train_deps() -> None:
     """Verify the heavy ML stack is importable, else raise a helpful error.
 
@@ -295,7 +329,7 @@ def train(config: TrainingConfig, dataset_path: str | Path) -> CheckpointInfo:
     train_ds = Dataset.from_list(train_records)
     eval_ds = Dataset.from_list(eval_records)
 
-    sft_config = SFTConfig(**config.to_sft_kwargs())
+    sft_config = SFTConfig(**_adapt_sft_kwargs(SFTConfig, config.to_sft_kwargs()))
     trainer = SFTTrainer(
         model=config.base_model,
         args=sft_config,
