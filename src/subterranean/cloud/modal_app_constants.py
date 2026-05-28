@@ -9,22 +9,67 @@ constants as the rest of the cloud package. Importing this module requires
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import modal
 
 APP_NAME = "subterranean"
 SERVE_APP = modal.App(APP_NAME)
 
-# Each image pulls only the extras the step needs, keeping cold-starts lean.
-_PIP_PKG = "subterranean-agents"
+# ----------------------------------------------------------------------------
+# Images
+#
+# Until ``subterranean-agents`` is published to PyPI, ship the local source tree
+# into the image and pip-install it editable with the relevant extras. This is
+# the standard Modal dev pattern (see ``Image.add_local_dir``) and lets the same
+# Modal apps run unchanged once the package is published — just swap each image
+# to ``pip_install("subterranean-agents[<extra>]")``.
+# ----------------------------------------------------------------------------
 
-#: CPU image for the API-bound generate/evaluate steps (core + anthropic only).
-CPU_IMAGE = modal.Image.debian_slim(python_version="3.11").pip_install(f"{_PIP_PKG}[report]")
+#: Repo root, derived from this file's location (``src/subterranean/cloud/...``).
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_REMOTE_SRC = "/root/subterranean"
+_IGNORE = [
+    "**/.git",
+    "**/.venv",
+    "**/__pycache__",
+    "**/.mypy_cache",
+    "**/.pytest_cache",
+    "**/.ruff_cache",
+    "**/build",
+    "**/dist",
+    "**/site",
+    "**/*.egg-info",
+    "**/htmlcov",
+    "**/.coverage",
+]
+
+
+def _local_install_image(extra: str) -> modal.Image:
+    """Build an image that pip-installs the local source with ``[extra]`` extras."""
+    return (
+        modal.Image.debian_slim(python_version="3.11")
+        .add_local_dir(
+            _REPO_ROOT,
+            remote_path=_REMOTE_SRC,
+            copy=True,
+            ignore=_IGNORE,
+        )
+        .run_commands(
+            "pip install --upgrade pip",
+            f"pip install -e '{_REMOTE_SRC}[{extra}]'",
+        )
+    )
+
+
+#: CPU image for the API-bound generate/evaluate steps (core + anthropic + matplotlib).
+CPU_IMAGE = _local_install_image("report")
 
 #: Training image: the heavy ML stack (torch/trl/deepspeed/bitsandbytes).
-TRAIN_IMAGE = modal.Image.debian_slim(python_version="3.11").pip_install(f"{_PIP_PKG}[train]")
+TRAIN_IMAGE = _local_install_image("train")
 
 #: Serving image: vLLM (CUDA/Linux only).
-SERVE_IMAGE = modal.Image.debian_slim(python_version="3.11").pip_install(f"{_PIP_PKG}[serve]")
+SERVE_IMAGE = _local_install_image("serve")
 
 #: Persisted build artifacts (flowchart IR, dataset.jsonl, eval reports).
 BUILD_VOLUME = modal.Volume.from_name("subterranean-build", create_if_missing=True)
