@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in `subterranean`. This guide covers the conventions CI
+Thanks for your interest in `agent2model`. This guide covers the conventions CI
 enforces and the release process.
 
 ## Development setup
@@ -27,7 +27,7 @@ Test tiers (see `pyproject.toml` markers):
 - **unit** — fast, mocked, no network/GPU; runs on every PR.
 - **integration** — real Anthropic API, tiny budgets; nightly (`-m integration`).
 - **e2e** — full reproduction, compared to the paper; release candidates
-  (`-m e2e`). Skipped unless `SUBTERRANEAN_E2E=1` and a built model are present.
+  (`-m e2e`). Skipped unless `AGENT2MODEL_E2E=1` and a built model are present.
 
 Coding conventions (see `Claude.md` for the full list): Python 3.11+, modern type
 hints, Pydantic v2 for user-facing schemas, Typer for CLI, Loguru for logging,

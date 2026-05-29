@@ -1,5 +1,5 @@
 {
-  "_comment": "Single source of truth for the paper's reproduction targets (Dennis et al. 2026a, arXiv:2605.22502v1). Read by the e2e regression gate (tests/e2e) and documented in benchmarks/README.md. Per-criterion means are Subterranean (compiled) scores, n=200. tol is the >5% regression gate from the spec.",
+  "_comment": "Single source of truth for the paper's reproduction targets (Dennis et al. 2026a, arXiv:2605.22502v1). Read by the e2e regression gate (tests/e2e) and documented in benchmarks/README.md. Per-criterion means are agent2model (compiled) scores, n=200. tol is the >5% regression gate from the spec.",
   "tolerance": 0.05,
   "paper": "arXiv:2605.22502v1",
   "examples": {

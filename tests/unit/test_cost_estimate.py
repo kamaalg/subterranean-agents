@@ -1,4 +1,4 @@
-"""Unit tests for :mod:`subterranean.cloud._costs`.
+"""Unit tests for :mod:`agent2model.cloud._costs`.
 
 The estimator is deliberately rough — we assert on **ranges** for the three
 paper recipes rather than exact values, since the underlying token assumptions
@@ -10,13 +10,13 @@ from __future__ import annotations
 
 import pytest
 
-from subterranean.cloud._costs import (
+from agent2model.cloud._costs import (
     CostEstimate,
     confirm_cost_or_exit,
     estimate_cost,
     format_cost_estimate,
 )
-from subterranean.cloud._recipes import get_recipe
+from agent2model.cloud._recipes import get_recipe
 
 # --------------------------------------------------------------------------- #
 # estimate_cost — ranges, not exact values                                     #

@@ -42,28 +42,28 @@ uses DeepSpeed ZeRO-3; run it on Modal unless you have an 8×A100 host.
 
 ```bash
 # 1. Compile + validate (this is the largest flowchart — worth eyeballing the node count).
-subterranean compile examples/insurance_claims/flowchart.yaml --out build/insurance
+agent2model compile examples/insurance_claims/flowchart.yaml --out build/insurance
 
 # 2. Generate synthetic data (~3k convos cover the many branches).
-subterranean generate build/insurance --n 3000 --model claude-sonnet-4-5 --budget 60
+agent2model generate build/insurance --n 3000 --model claude-sonnet-4-5 --budget 60
 
 # 3. Full fine-tune the 8B base model (ZeRO-3), 20 epochs.
-subterranean train build/insurance --base Qwen/Qwen3-8B --size 8b --epochs 20
+agent2model train build/insurance --base Qwen/Qwen3-8B --size 8b --epochs 20
 
 # 4. Evaluate against baselines (or serve).
-subterranean eval build/insurance --baselines in_context,langgraph --n 200
-subterranean serve build/insurance --port 8000
+agent2model eval build/insurance --baselines in_context,langgraph --n 200
+agent2model serve build/insurance --port 8000
 ```
 
 No local GPU? Run it on Modal:
 
 ```bash
-modal run -m subterranean.cloud.modal_app::reproduce_insurance
+modal run -m agent2model.cloud.modal_app::reproduce_insurance
 ```
 
 ## Expected results
 
-Per-criterion means (1–5), `n=200`, Subterranean (compiled 8B) vs. the paper.
+Per-criterion means (1–5), `n=200`, agent2model (compiled 8B) vs. the paper.
 Fill in **Your run** from `build/insurance/eval_report.json`. The release gate
 fails if any criterion drops >5% below the paper number.
 

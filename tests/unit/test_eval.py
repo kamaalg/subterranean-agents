@@ -13,7 +13,7 @@ from typing import Any
 import pytest
 from anthropic.types import Message, TextBlock, Usage
 
-from subterranean.eval.baselines import (
+from agent2model.eval.baselines import (
     BASELINE_NAMES,
     CompiledCondition,
     ConditionContext,
@@ -23,9 +23,9 @@ from subterranean.eval.baselines import (
     make_condition,
     run_condition,
 )
-from subterranean.eval.judge import Judge, JudgeConfig, JudgeVerdict
-from subterranean.eval.report import write_json_report, write_pdf_report
-from subterranean.eval.runner import (
+from agent2model.eval.judge import Judge, JudgeConfig, JudgeVerdict
+from agent2model.eval.report import write_json_report, write_pdf_report
+from agent2model.eval.runner import (
     ConditionResult,
     EvalConfig,
     EvalRunner,
@@ -33,12 +33,12 @@ from subterranean.eval.runner import (
     estimate_eval_cost,
     summarize_condition,
 )
-from subterranean.eval.simulator import UserSimulator, simulator_system_prompt
-from subterranean.exceptions import EvalError
-from subterranean.generation.formatter import Turn
-from subterranean.ir.loader import load_flowchart_from_string
-from subterranean.ir.schema import Flowchart
-from subterranean.ir.validator import validate
+from agent2model.eval.simulator import UserSimulator, simulator_system_prompt
+from agent2model.exceptions import EvalError
+from agent2model.generation.formatter import Turn
+from agent2model.ir.loader import load_flowchart_from_string
+from agent2model.ir.schema import Flowchart
+from agent2model.ir.validator import validate
 
 SAMPLE_YAML = """
 name: support
@@ -436,7 +436,7 @@ async def test_runner_compares_all_pairs_without_compiled(flowchart: Flowchart) 
 
 
 async def test_runner_budget_guard(flowchart: Flowchart) -> None:
-    from subterranean.exceptions import EvalBudgetExceeded
+    from agent2model.exceptions import EvalBudgetExceeded
 
     # Huge token usage with a tiny budget -> must raise.
     class _BigMessages(_ScriptedMessages):
@@ -466,7 +466,7 @@ async def test_runner_budget_guard(flowchart: Flowchart) -> None:
 
 
 def _run_result() -> Any:
-    from subterranean.eval.runner import EvalRunResult
+    from agent2model.eval.runner import EvalRunResult
 
     a = summarize_condition(
         "compiled", [_verdict() for _ in range(5)], cost_usd=0.005, wall_clock_s=[1.0] * 5

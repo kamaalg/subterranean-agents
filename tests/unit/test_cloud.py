@@ -1,7 +1,7 @@
 """Unit tests for the cloud recipes (Phase 7).
 
 These tests are network-/cloud-/GPU-free. They exercise the pure recipe helpers
-in :mod:`subterranean.cloud._recipes` (image/GPU/config selection, step
+in :mod:`agent2model.cloud._recipes` (image/GPU/config selection, step
 sequencing, that the reproduce configs match the paper's per-example sizes and
 epochs), validate the RunPod JSON specs, and confirm the core + ``cloud`` package
 import **without** modal installed. ``modal_app`` itself is only touched behind a
@@ -16,8 +16,8 @@ from pathlib import Path
 
 import pytest
 
-from subterranean.cloud import _recipes
-from subterranean.cloud._recipes import (
+from agent2model.cloud import _recipes
+from agent2model.cloud._recipes import (
     DEFAULT_BASE_FOR_SIZE,
     EXAMPLES,
     GPU_3B,
@@ -47,12 +47,12 @@ def test_core_imports_without_modal() -> None:
     # depending on the host); the modal-free guarantee is independently covered
     # by ``test_cloud_init_does_not_import_modal_app`` and
     # ``test_recipes_module_has_no_modal_dependency``.
-    assert importlib.import_module("subterranean") is not None
-    assert importlib.import_module("subterranean.cloud") is not None
+    assert importlib.import_module("agent2model") is not None
+    assert importlib.import_module("agent2model.cloud") is not None
 
 
 def test_cloud_init_does_not_import_modal_app() -> None:
-    import subterranean.cloud as cloud_pkg
+    import agent2model.cloud as cloud_pkg
 
     assert not hasattr(cloud_pkg, "modal_app")
 
@@ -231,9 +231,9 @@ def test_runpod_setup_script_present_and_covers_all_stages() -> None:
 
 def test_modal_app_importable_where_modal_present() -> None:
     pytest.importorskip("modal")
-    from subterranean.cloud import modal_app
+    from agent2model.cloud import modal_app
 
-    assert modal_app.APP_NAME == "subterranean"
+    assert modal_app.APP_NAME == "agent2model"
     for fn in ("generate_data", "train_3b", "train_8b", "evaluate", "serve"):
         assert hasattr(modal_app, fn)
     for ep in ("reproduce_travel", "reproduce_zoom", "reproduce_insurance", "run"):
@@ -242,7 +242,7 @@ def test_modal_app_importable_where_modal_present() -> None:
 
 def test_modal_app_exposes_build_recipe_helper() -> None:
     pytest.importorskip("modal")
-    from subterranean.cloud import modal_app
+    from agent2model.cloud import modal_app
 
     assert callable(modal_app.build_recipe_from_path)
 
@@ -323,8 +323,8 @@ def test_flowchart_to_yaml_text_round_trips() -> None:
     pytest.importorskip("langgraph")
     import yaml as _yaml
 
-    from subterranean.adapters.langgraph import flowchart_to_yaml_text
-    from subterranean.ir.schema import Flowchart
+    from agent2model.adapters.langgraph import flowchart_to_yaml_text
+    from agent2model.ir.schema import Flowchart
 
     source = Flowchart.model_validate(_yaml.safe_load(_MINIMAL_YAML))
     text = flowchart_to_yaml_text(source)
@@ -338,9 +338,9 @@ def test_langgraph_to_yaml_text_produces_validatable_flowchart(tmp_path: Path) -
     pytest.importorskip("langgraph")
     import yaml as _yaml
 
-    from subterranean.adapters.langgraph import langgraph_to_yaml_text
-    from subterranean.ir.schema import Flowchart
-    from subterranean.ir.validator import validate
+    from agent2model.adapters.langgraph import langgraph_to_yaml_text
+    from agent2model.ir.schema import Flowchart
+    from agent2model.ir.validator import validate
 
     src = tmp_path / "g.py"
     src.write_text(
@@ -370,7 +370,7 @@ def test_langgraph_to_yaml_text_produces_validatable_flowchart(tmp_path: Path) -
 
 def test_build_recipe_from_path_reads_yaml(tmp_path: Path) -> None:
     pytest.importorskip("modal")
-    from subterranean.cloud.modal_app import build_recipe_from_path
+    from agent2model.cloud.modal_app import build_recipe_from_path
 
     yaml_path = tmp_path / "wf.yaml"
     yaml_path.write_text(_MINIMAL_YAML, encoding="utf-8")
@@ -388,7 +388,7 @@ def test_build_recipe_from_path_reads_yaml(tmp_path: Path) -> None:
 
 def test_build_recipe_from_path_name_override(tmp_path: Path) -> None:
     pytest.importorskip("modal")
-    from subterranean.cloud.modal_app import build_recipe_from_path
+    from agent2model.cloud.modal_app import build_recipe_from_path
 
     yaml_path = tmp_path / "wf.yaml"
     yaml_path.write_text(_MINIMAL_YAML, encoding="utf-8")
@@ -400,7 +400,7 @@ def test_build_recipe_from_path_name_override(tmp_path: Path) -> None:
 
 def test_build_recipe_from_path_rejects_unknown_suffix(tmp_path: Path) -> None:
     pytest.importorskip("modal")
-    from subterranean.cloud.modal_app import build_recipe_from_path
+    from agent2model.cloud.modal_app import build_recipe_from_path
 
     bogus = tmp_path / "wf.txt"
     bogus.write_text("oops", encoding="utf-8")
@@ -410,7 +410,7 @@ def test_build_recipe_from_path_rejects_unknown_suffix(tmp_path: Path) -> None:
 
 def test_build_recipe_from_path_rejects_unknown_size(tmp_path: Path) -> None:
     pytest.importorskip("modal")
-    from subterranean.cloud.modal_app import build_recipe_from_path
+    from agent2model.cloud.modal_app import build_recipe_from_path
 
     yaml_path = tmp_path / "wf.yaml"
     yaml_path.write_text(_MINIMAL_YAML, encoding="utf-8")
@@ -421,7 +421,7 @@ def test_build_recipe_from_path_rejects_unknown_size(tmp_path: Path) -> None:
 def test_build_recipe_from_path_handles_langgraph_pyfile(tmp_path: Path) -> None:
     pytest.importorskip("modal")
     pytest.importorskip("langgraph")
-    from subterranean.cloud.modal_app import build_recipe_from_path
+    from agent2model.cloud.modal_app import build_recipe_from_path
 
     src = tmp_path / "lg.py"
     src.write_text(

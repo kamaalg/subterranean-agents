@@ -46,7 +46,7 @@ more conversations.
 The fine-tuning stack is GPU-only and not installed by default:
 
 ```bash
-pip install "subterranean-agents[train]"
+pip install "agent2model[train]"
 ```
 
 …and run on a CUDA host. No GPU? Use the [Modal recipes](cloud.md).
@@ -67,7 +67,7 @@ id is correct.
 vLLM is GPU/CUDA-only:
 
 ```bash
-pip install "subterranean-agents[serve]"
+pip install "agent2model[serve]"
 ```
 
 The command resolves `<build>/model/best` (falling back to the dir itself); make
@@ -78,7 +78,7 @@ sure training produced a `best` checkpoint.
 PDF rendering needs matplotlib:
 
 ```bash
-pip install "subterranean-agents[report]"
+pip install "agent2model[report]"
 ```
 
 The JSON report (`eval_report.json`) is always written regardless.
@@ -86,5 +86,5 @@ The JSON report (`eval_report.json`) is always written regardless.
 ## `eval` with `langgraph` baseline errors
 
 The `langgraph` baseline needs the LangGraph install
-(`pip install "subterranean-agents[dev]"` includes it, or `pip install langgraph`).
+(`pip install "agent2model[dev]"` includes it, or `pip install langgraph`).
 The `compiled` condition needs a served model URL via `--served-url`.

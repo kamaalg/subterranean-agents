@@ -1,4 +1,4 @@
-"""Unit tests for :mod:`subterranean.cloud.doctor`.
+"""Unit tests for :mod:`agent2model.cloud.doctor`.
 
 Every check is tested in isolation by monkeypatching the underlying
 dependency (env vars, filesystem, Modal SDK, Anthropic SDK, ``huggingface_hub``).
@@ -14,8 +14,8 @@ from typing import Any
 
 import pytest
 
-from subterranean.cloud import doctor
-from subterranean.cloud.doctor import (
+from agent2model.cloud import doctor
+from agent2model.cloud.doctor import (
     CheckResult,
     check_anthropic_key,
     check_anthropic_secret,
@@ -214,7 +214,7 @@ def test_check_hf_token_skipped_when_no_token(
     # Re-point HOME to a temp dir so the cache file is guaranteed absent.
     monkeypatch.setenv("HOME", str(tmp_path))
     # The doctor uses Path.home() captured at module import; patch the function.
-    monkeypatch.setattr("subterranean.cloud.doctor.Path.home", lambda: tmp_path)
+    monkeypatch.setattr("agent2model.cloud.doctor.Path.home", lambda: tmp_path)
     result = check_hf_token()
     assert result.ok is True
     assert result.severity == "informational"

@@ -155,8 +155,8 @@ def observed_from_report(
     """Extract per-criterion means for one condition from an eval-report dict.
 
     Parses the structure written by
-    :func:`subterranean.eval.report.write_json_report` (an
-    :class:`~subterranean.eval.runner.EvalRunResult` dumped to JSON).
+    :func:`agent2model.eval.report.write_json_report` (an
+    :class:`~agent2model.eval.runner.EvalRunResult` dumped to JSON).
 
     Args:
         report: The parsed ``eval_report.json`` contents.

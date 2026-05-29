@@ -13,9 +13,9 @@ from typing import Any
 import pytest
 from anthropic.types import Message, TextBlock, Usage
 
-from subterranean.exceptions import FlowchartValidationError, GenerationBudgetExceeded
-from subterranean.generation.formatter import Conversation, Turn, write_dataset
-from subterranean.generation.generator import (
+from agent2model.exceptions import FlowchartValidationError, GenerationBudgetExceeded
+from agent2model.generation.formatter import Conversation, Turn, write_dataset
+from agent2model.generation.generator import (
     DEFAULT_MODEL,
     ConversationGenerator,
     CostTracker,
@@ -23,11 +23,11 @@ from subterranean.generation.generator import (
     build_system_prompt,
     estimate_cost,
 )
-from subterranean.generation.scenarios import sample_scenario
-from subterranean.generation.traversal import TraversalConfig, sample_path
-from subterranean.ir.loader import load_flowchart_from_string
-from subterranean.ir.schema import Flowchart
-from subterranean.ir.validator import validate
+from agent2model.generation.scenarios import sample_scenario
+from agent2model.generation.traversal import TraversalConfig, sample_path
+from agent2model.ir.loader import load_flowchart_from_string
+from agent2model.ir.schema import Flowchart
+from agent2model.ir.validator import validate
 
 # A small valid flowchart exercising agent, user, and decision roles plus a cycle.
 SAMPLE_YAML = """

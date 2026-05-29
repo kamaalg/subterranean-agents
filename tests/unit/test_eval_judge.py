@@ -10,19 +10,19 @@ from typing import Any
 import pytest
 from anthropic.types import Message, TextBlock, Usage
 
-from subterranean.eval.judge import (
+from agent2model.eval.judge import (
     Judge,
     JudgeConfig,
     build_judge_prompt,
     parse_judge_json,
 )
-from subterranean.eval.rubric import (
+from agent2model.eval.rubric import (
     GRACEFUL_HANDLING_CAP,
     RUBRIC,
     apply_graceful_handling_cap,
 )
-from subterranean.exceptions import EvalError
-from subterranean.generation.formatter import Turn
+from agent2model.exceptions import EvalError
+from agent2model.generation.formatter import Turn
 
 # --------------------------------------------------------------------------- #
 # Rubric                                                                       #

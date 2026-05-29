@@ -1,7 +1,7 @@
 # LangGraph demo — compile a `StateGraph` into IR
 
 You don't have to hand-write YAML. If your procedure already exists as a
-LangGraph `StateGraph`, `subterranean compile` discovers it from a `.py` file and
+LangGraph `StateGraph`, `agent2model compile` discovers it from a `.py` file and
 converts the **structure** into the Flowchart IR.
 
 [`demo.py`](demo.py) defines a small order-support graph and exposes it as a
@@ -12,7 +12,7 @@ factory).
 ## Compile it
 
 ```bash
-subterranean compile examples/langgraph_demo/demo.py --out build/demo
+agent2model compile examples/langgraph_demo/demo.py --out build/demo
 ```
 
 This writes `build/demo/flowchart.json`. The adapter maps:
@@ -35,9 +35,9 @@ Open `build/demo/flowchart.json` (or export it back to YAML) and replace each
 pipeline is identical to the YAML examples:
 
 ```bash
-subterranean generate build/demo --n 2000 --model claude-sonnet-4-5 --budget 60
-subterranean train    build/demo --base Qwen/Qwen2.5-3B-Instruct --size 3b --epochs 20
-subterranean eval     build/demo --baselines in_context,langgraph --n 200
+agent2model generate build/demo --n 2000 --model claude-sonnet-4-5 --budget 60
+agent2model train    build/demo --base Qwen/Qwen2.5-3B-Instruct --size 3b --epochs 20
+agent2model eval     build/demo --baselines in_context,langgraph --n 200
 ```
 
 ## Notes

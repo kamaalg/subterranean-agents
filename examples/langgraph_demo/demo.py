@@ -2,7 +2,7 @@
 
 This file is the *source* the LangGraph adapter discovers and compiles:
 
-    subterranean compile examples/langgraph_demo/demo.py --out build/demo
+    agent2model compile examples/langgraph_demo/demo.py --out build/demo
 
 It defines a small order-support procedure as a LangGraph graph. The adapter
 recovers the *structure* (nodes, plain edges, and the conditional ``triage``

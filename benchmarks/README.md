@@ -1,9 +1,21 @@
 # Benchmarks
 
-Reproduction numbers for `subterranean` against the paper
+**The procedural-agent-adherence benchmark.** Unlike QA, math, or tool-use
+benchmarks, this measures whether a model correctly *runs a multi-turn procedure*
+through to an appropriate terminal state — the thing `agent2model` compiles. The
+harness (5-criterion LLM-judge rubric + flowchart-blind user simulator + baselines
++ bootstrap CIs / Wilcoxon / Holm-Bonferroni) is reusable on any procedure, so
+these tables are a standard others can reproduce, not just our self-report.
+
+Reproduction numbers for `agent2model` against the paper
 (Dennis et al. 2026a, *Compiling Agentic Workflows into LLM Weights*,
 arXiv:2605.22502v1). These tables track how close the library's compiled models
 get to the paper's published results.
+
+> **Status (2026-05):** the **Paper** columns are published targets. **Current**
+> columns are this repo's independently-reproduced numbers — being run now and
+> filled in as each reproduction completes. Until then, treat the cost/quality
+> headline as *the paper's claim we are reproducing*, not yet our verified result.
 
 The target numbers live in [`targets.json`](targets.json), which is the **single
 source of truth**: the end-to-end regression gate (`tests/e2e/`) reads it, the
@@ -12,7 +24,7 @@ not five.
 
 ## How to read these tables
 
-- **Per-criterion means** are the Subterranean (compiled) model's scores on the
+- **Per-criterion means** are the agent2model (compiled) model's scores on the
   paper's 5-criterion LLM-judge rubric, `n=200` scenarios per condition, scored
   1–5. Higher is better.
 - **Paper** is the published target. **Current** is the most recent measured run
@@ -63,7 +75,7 @@ Compiled (self-hosted, amortised GPU) vs. the in-context frontier baseline
 (Claude Sonnet 4.5 with the full flowchart in the system prompt). Quality
 retention across the three procedures is **87–98%** of frontier.
 
-| Procedure | Subterranean $/conv | Cost ratio vs in-context |
+| Procedure | agent2model $/conv | Cost ratio vs in-context |
 |---|---|---|
 | Travel booking | $0.0010 | 128× |
 | Zoom support | $0.0003 | 296× |
@@ -74,13 +86,13 @@ retention across the three procedures is **87–98%** of frontier.
 `benchmarks/targets.json` holds the paper means and the `tolerance` (0.05). The
 e2e tier (`tests/e2e/`, marked `@pytest.mark.e2e`) runs a full reproduction and
 calls the pure helper
-`subterranean`-adjacent `within_tolerance` / `assert_no_regression`
+`agent2model`-adjacent `within_tolerance` / `assert_no_regression`
 (`tests/e2e/regression.py`) to compare each measured criterion against its
 target. A criterion that falls more than 5% below the paper number fails the
 build, which blocks the release.
 
 The e2e tier needs a trained model and is **skipped by default**. It runs only
-when `SUBTERRANEAN_E2E=1` is set and a built model/report path is present (see
+when `AGENT2MODEL_E2E=1` is set and a built model/report path is present (see
 `tests/e2e/README` notes in `tests/e2e/test_reproductions.py`). The regression
 math itself is unit-tested in `tests/unit/test_regression_gate.py`, so the
 >5% logic is covered even where the full pipeline cannot run.
