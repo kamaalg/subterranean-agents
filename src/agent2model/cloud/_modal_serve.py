@@ -1,16 +1,23 @@
 """Modal class for the autoscaling vLLM serve endpoint.
 
-Lives in its own module because :func:`modal.parameter` requires Modal to
-introspect real type objects on the class annotations, which means this file
-**cannot** carry ``from __future__ import annotations``. The rest of
-:mod:`agent2model.cloud.modal_app` does carry it (for the worker-function
-signatures), so we isolate the class here and re-export it.
+The class is intentionally **non-parameterised** — ``@modal.parameter`` +
+``@modal.web_server`` conflict at the URL routing layer (parameter dispatch
+uses the 303-poll function-call pattern, but ``web_server`` needs Modal to
+proxy raw HTTP to a long-running server). Empirically this manifests as
+infinite 303 redirects on every incoming request.
 
-Modal also requires :func:`modal.App.cls`-decorated classes to be defined at
-module top level (they cannot be created inside a factory function), which is
-why :data:`ServeCls` is constructed declaratively here using shared images and
-volumes imported from :mod:`agent2model.cloud.modal_app`.
+To serve a different recipe, set the env var ``AGENT2MODEL_SERVE_RECIPE`` on
+the Modal Secret ``agent2model-serve-config`` (or in the deployment) and
+redeploy. One deployment = one served recipe. Trades flexibility for an HTTP
+path that actually works.
+
+Lives in its own module because the rest of :mod:`agent2model.cloud.modal_app`
+carries ``from __future__ import annotations`` (needed for the worker function
+signatures), and Modal's class-discovery has historically been fragile around
+stringified annotations.
 """
+
+import os
 
 import modal
 
@@ -27,6 +34,14 @@ from agent2model.cloud.modal_app_constants import (
     VOLUMES,
 )
 
+#: Env var read at container start to pick which recipe to serve.
+SERVE_RECIPE_ENV = "AGENT2MODEL_SERVE_RECIPE"
+#: Optional env var to override the on-volume model path.
+SERVE_MODEL_PATH_ENV = "AGENT2MODEL_SERVE_MODEL_PATH"
+#: Fallback recipe when neither env var nor secret is set. Aligns with the
+#: included travel-booking example so a fresh deploy "just serves" something.
+SERVE_DEFAULT_RECIPE = "travel_booking"
+
 
 @SERVE_APP.cls(
     image=SERVE_IMAGE,
@@ -39,28 +54,25 @@ from agent2model.cloud.modal_app_constants import (
 )
 @modal.concurrent(max_inputs=32)
 class ServeCls:
-    """Per-recipe vLLM endpoint, parameterised by ``recipe_name`` / ``model_path``.
+    """Single-recipe vLLM endpoint exposed via a stable Modal HTTP URL.
 
-    Modal's ``@modal.web_server`` requires a nullary method, so the recipe name
-    and optional checkpoint override are passed via :func:`modal.parameter`
-    rather than method arguments. Callers usually go through
-    :data:`agent2model.cloud.modal_app.serve` which presents a natural
-    ``serve.remote(recipe, model_path=None)`` API.
+    Reads the recipe from ``$AGENT2MODEL_SERVE_RECIPE`` (default:
+    ``travel_booking``) at container startup. To serve a different recipe,
+    update the deployment's env / Modal Secret and redeploy.
     """
-
-    recipe_name: str = modal.parameter()
-    model_path: str = modal.parameter(default="")
 
     @modal.web_server(port=SERVE_PORT, startup_timeout=600)  # type: ignore[untyped-decorator]
     def run(self) -> None:
         """Launch the OpenAI-compatible vLLM server inside the container."""
         from agent2model.serve import vllm_server
 
-        base = self.model_path or f"{MODEL_ROOT}/{self.recipe_name}"
+        recipe_name = os.environ.get(SERVE_RECIPE_ENV, SERVE_DEFAULT_RECIPE)
+        model_path = os.environ.get(SERVE_MODEL_PATH_ENV, "")
+        base = model_path or f"{MODEL_ROOT}/{recipe_name}"
         resolved = vllm_server.resolve_model_path(base)
         vllm_server.serve(
             resolved,
             port=SERVE_PORT,
             host="0.0.0.0",
-            served_model_name=self.recipe_name,
+            served_model_name=recipe_name,
         )
