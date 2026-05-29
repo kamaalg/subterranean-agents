@@ -14,6 +14,7 @@ No real ``modal`` calls happen. The harness is fast, deterministic, and offline.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +22,18 @@ import pytest
 from typer.testing import CliRunner
 
 from agent2model.cli import MODAL_RUN_TARGET, _build_modal_run_argv, app
+
+#: Matches ANSI SGR escape sequences. Typer renders ``--help`` through Rich,
+#: which colors each option name in the Options panel. When color is forced on
+#: (as GitHub Actions does for the test runner), those codes land *inside* flag
+#: tokens, so a naive ``"--name" in output`` check fails even though the flag is
+#: present. Strip the codes before substring-matching help text.
+_ANSI_SGR = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _plain(text: str) -> str:
+    """Return ``text`` with ANSI SGR (color/style) escape codes removed."""
+    return _ANSI_SGR.sub("", text)
 
 
 @pytest.fixture
@@ -31,7 +44,9 @@ def runner() -> CliRunner:
 def test_cloud_run_help_lists_documented_flags(runner: CliRunner) -> None:
     result = runner.invoke(app, ["cloud", "run", "--help"])
     assert result.exit_code == 0, result.output
-    # Help text wraps so we just check the flag tokens individually.
+    # Help text wraps and Rich colors option names, so strip ANSI codes and
+    # check the flag tokens individually.
+    out = _plain(result.output)
     for flag in (
         "--name",
         "--size",
@@ -43,7 +58,7 @@ def test_cloud_run_help_lists_documented_flags(runner: CliRunner) -> None:
         "--serve-after",
         "--dry-run",
     ):
-        assert flag in result.output, f"missing {flag} in help output:\n{result.output}"
+        assert flag in out, f"missing {flag} in help output:\n{out}"
 
 
 def test_cloud_subcommand_listed_in_main_help(runner: CliRunner) -> None:
@@ -188,8 +203,9 @@ def test_cloud_run_handles_missing_modal_executable(
 def test_cloud_run_help_advertises_yes(runner: CliRunner) -> None:
     result = runner.invoke(app, ["cloud", "run", "--help"])
     assert result.exit_code == 0, result.output
-    assert "--yes" in result.output
-    assert "--no-yes" in result.output
+    out = _plain(result.output)
+    assert "--yes" in out
+    assert "--no-yes" in out
 
 
 def test_build_modal_run_argv_with_yes(tmp_path: Path) -> None:

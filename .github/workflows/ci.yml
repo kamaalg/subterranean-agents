@@ -26,7 +26,7 @@ jobs:
       - name: Mypy (strict)
         run: mypy src
       - name: Pytest (unit)
-        run: pytest tests/unit -q --cov=subterranean --cov-report=term-missing
+        run: pytest tests/unit -q --cov=agent2model --cov-report=term-missing
 
   integration:
     name: integration (nightly)
