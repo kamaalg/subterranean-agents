@@ -60,13 +60,14 @@ __all__ = [
 ]
 
 #: GPU spec strings, in Modal's ``gpu=`` notation, for each training path.
-GPU_3B = "A100-40GB"
+GPU_3B = "A100-80GB"
 """Single-GPU spec for the 3B path.
 
-A10G (22 GB) is too tight for Qwen 2.5 3B full-param bf16 + 8-bit AdamW even
-with gradient checkpointing — the 152K-vocab logits at the cross-entropy layer
-push it past OOM. A100-40GB has the headroom and the cost diff for a typical
-~3.5h run is small ($1.10/hr vs ~$2/hr).
+Even A100-40GB OOMs on Qwen 2.5 3B with full-param bf16 + 8-bit AdamW + grad
+checkpointing — bitsandbytes' 8-bit AdamW still keeps fp32 master weights
+(~12 GB on its own), and with the 152K-vocab cross-entropy logits the total
+sits at ~38-40 GB right at the failing forward pass. A100-80GB has clean
+headroom. Cost diff vs 40GB on a 3.5h run is ~$5; safer than fighting OOM.
 """
 
 GPU_8B = "A100-80GB:8"

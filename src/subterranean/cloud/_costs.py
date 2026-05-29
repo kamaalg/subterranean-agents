@@ -125,7 +125,7 @@ def _rates_for(model: str) -> dict[str, float]:
 
 def _gen_gpu_spec_for_size(size: ModelSize) -> str:
     """Return the Modal GPU spec for a training size — kept in sync with ``_recipes``."""
-    return "A100-40GB" if size == "3b" else "A100-80GB:8"
+    return "A100-80GB" if size == "3b" else "A100-80GB:8"
 
 
 def _train_hours_for(recipe: Recipe) -> float:

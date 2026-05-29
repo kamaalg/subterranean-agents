@@ -35,10 +35,10 @@ def test_estimate_cost_travel_in_sensible_range() -> None:
     # estimator can go a bit higher.
     assert 20.0 < est.gen_anthropic_usd < 80.0
     assert 1.0 < est.eval_anthropic_usd < 20.0
-    # Training: 3B baseline is 3.5h on A100-40GB ($2.10/hr) = ~$7.35.
-    # (A10G's 22 GB is too tight for Qwen 2.5 3B full FT bf16 — see _recipes.GPU_3B.)
+    # Training: 3B baseline is 3.5h on A100-80GB ($3.40/hr) = ~$11.90.
+    # (A10G/A100-40GB are both too tight — see _recipes.GPU_3B.)
     assert 2.0 < est.train_gpu_hours < 6.0
-    assert 4.0 < est.train_gpu_usd < 12.0
+    assert 6.0 < est.train_gpu_usd < 18.0
     assert est.serve_gpu_usd_per_hour == pytest.approx(1.10, abs=0.05)
     assert est.total_excl_serve_usd == pytest.approx(
         est.gen_anthropic_usd + est.eval_anthropic_usd + est.train_gpu_usd, rel=0.01

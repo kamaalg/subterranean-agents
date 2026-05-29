@@ -115,8 +115,9 @@ def test_recipe_is_frozen() -> None:
 
 
 def test_gpu_for_size() -> None:
-    # 3B: A100-40GB — A10G's 22 GB is too tight for Qwen 2.5 3B full FT bf16.
-    assert gpu_for_size("3b") == GPU_3B == "A100-40GB"
+    # 3B: A100-80GB — even A100-40GB OOMs on Qwen 2.5 3B full FT bf16
+    # (8-bit AdamW still keeps fp32 master weights, ~38 GB at peak).
+    assert gpu_for_size("3b") == GPU_3B == "A100-80GB"
     assert gpu_for_size("8b") == GPU_8B == "A100-80GB:8"
 
 
