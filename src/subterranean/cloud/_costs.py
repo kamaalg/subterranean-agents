@@ -39,6 +39,7 @@ __all__ = [
 #: nominal sticker price.
 MODAL_GPU_USD_PER_HOUR: dict[str, float] = {
     "A10G": 1.10,
+    "A100-40GB": 2.10,
     "A100-80GB": 3.40,
     "A100-80GB:8": 24.0,
 }
@@ -124,7 +125,7 @@ def _rates_for(model: str) -> dict[str, float]:
 
 def _gen_gpu_spec_for_size(size: ModelSize) -> str:
     """Return the Modal GPU spec for a training size — kept in sync with ``_recipes``."""
-    return "A10G" if size == "3b" else "A100-80GB:8"
+    return "A100-40GB" if size == "3b" else "A100-80GB:8"
 
 
 def _train_hours_for(recipe: Recipe) -> float:

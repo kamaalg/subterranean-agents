@@ -115,7 +115,8 @@ def test_recipe_is_frozen() -> None:
 
 
 def test_gpu_for_size() -> None:
-    assert gpu_for_size("3b") == GPU_3B == "A10G"
+    # 3B: A100-40GB — A10G's 22 GB is too tight for Qwen 2.5 3B full FT bf16.
+    assert gpu_for_size("3b") == GPU_3B == "A100-40GB"
     assert gpu_for_size("8b") == GPU_8B == "A100-80GB:8"
 
 

@@ -60,8 +60,14 @@ __all__ = [
 ]
 
 #: GPU spec strings, in Modal's ``gpu=`` notation, for each training path.
-GPU_3B = "A10G"
-"""Single-GPU spec for the 3B path (an A100 also satisfies it; A10G is cheaper)."""
+GPU_3B = "A100-40GB"
+"""Single-GPU spec for the 3B path.
+
+A10G (22 GB) is too tight for Qwen 2.5 3B full-param bf16 + 8-bit AdamW even
+with gradient checkpointing — the 152K-vocab logits at the cross-entropy layer
+push it past OOM. A100-40GB has the headroom and the cost diff for a typical
+~3.5h run is small ($1.10/hr vs ~$2/hr).
+"""
 
 GPU_8B = "A100-80GB:8"
 """8x A100 80GB for the 8B DeepSpeed ZeRO-3 path."""
