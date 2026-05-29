@@ -45,6 +45,7 @@ Entrypoints (``modal run -m agent2model.cloud.modal_app::<name>``):
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -374,8 +375,9 @@ class _ServeProxy:
 
     Mirrors the call shape of the other workers (``generate_data.remote(recipe)``,
     ``train_3b.remote(recipe, dataset)``) so the generic ``run`` entrypoint reads
-    uniformly. Internally builds the :class:`ServeCls` Modal class with the
-    parameters set and calls the underlying nullary ``web_server``-decorated method.
+    uniformly. :class:`ServeCls` is intentionally non-parameterised at the Modal
+    level (see ``_modal_serve.py`` for why); the recipe is conveyed via env vars
+    that the container reads at startup.
     """
 
     @staticmethod
@@ -387,20 +389,20 @@ class _ServeProxy:
             model_path: Optional explicit checkpoint path; defaults to the
                 recipe's on-volume model directory.
         """
-        # modal's @app.cls rewrites the class; mypy can't see modal.parameter()
-        # kw-args, so silence the call-arg check here.
-        instance = ServeCls(  # type: ignore[call-arg]
-            recipe_name=recipe.name, model_path=model_path or ""
-        )
-        instance.run.remote()
+        # Env vars set here flow into the container via Modal's env propagation;
+        # ServeCls.run reads them at startup. One deploy = one served recipe.
+        os.environ["AGENT2MODEL_SERVE_RECIPE"] = recipe.name
+        if model_path:
+            os.environ["AGENT2MODEL_SERVE_MODEL_PATH"] = model_path
+        ServeCls().run.remote()
 
     @staticmethod
     def spawn(recipe: Recipe, model_path: str | None = None) -> None:
         """Spawn the serve endpoint asynchronously (does not wait for startup)."""
-        instance = ServeCls(  # type: ignore[call-arg]
-            recipe_name=recipe.name, model_path=model_path or ""
-        )
-        instance.run.spawn()
+        os.environ["AGENT2MODEL_SERVE_RECIPE"] = recipe.name
+        if model_path:
+            os.environ["AGENT2MODEL_SERVE_MODEL_PATH"] = model_path
+        ServeCls().run.spawn()
 
 
 #: Module-level serve handle exposing ``serve.remote(recipe, model_path=None)``.
