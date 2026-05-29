@@ -1,6 +1,6 @@
 """Pure, modal-free cost estimator for a cloud pipeline run.
 
-Mirrors the shape of :mod:`subterranean.cloud._recipes` — no Modal import, no
+Mirrors the shape of :mod:`agent2model.cloud._recipes` — no Modal import, no
 Anthropic call — so the same estimator can be exercised by unit tests and
 called from the Modal ``local_entrypoint`` before any spend happens.
 
@@ -8,7 +8,7 @@ The estimator is intentionally *rough*: actual cost depends on real conversation
 length, judge verbosity, GPU contention, and Modal autoscaling. The point is to
 give the user a sane order-of-magnitude before they confirm a multi-hour run.
 We reuse Anthropic per-million-token pricing from
-:mod:`subterranean.generation.generator` so a single source of truth governs
+:mod:`agent2model.generation.generator` so a single source of truth governs
 prices.
 
 GPU rates are baked in from Modal's published per-second prices (rounded to the
@@ -21,9 +21,9 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from subterranean.cloud._recipes import Recipe
-from subterranean.generation.generator import _FALLBACK_PRICING, _PRICING
-from subterranean.training.config import ModelSize
+from agent2model.cloud._recipes import Recipe
+from agent2model.generation.generator import _FALLBACK_PRICING, _PRICING
+from agent2model.training.config import ModelSize
 
 __all__ = [
     "DEFAULT_GENERATION_MODEL",
@@ -45,7 +45,7 @@ MODAL_GPU_USD_PER_HOUR: dict[str, float] = {
 }
 
 #: Default Anthropic model id used by the generator and judge — must match
-#: :data:`subterranean.generation.generator.DEFAULT_MODEL` for the estimate to
+#: :data:`agent2model.generation.generator.DEFAULT_MODEL` for the estimate to
 #: line up with what the run actually bills.
 DEFAULT_GENERATION_MODEL = "claude-sonnet-4-5"
 
@@ -165,7 +165,7 @@ def estimate_cost(
         recipe: The recipe whose cost to estimate.
         generation_model: Anthropic model id used for synthetic generation.
             Defaults to the production default; the rate comes from
-            :data:`subterranean.generation.generator._PRICING`.
+            :data:`agent2model.generation.generator._PRICING`.
         judge_model: Anthropic model id used for the LLM judge during eval.
             Defaults to ``generation_model``.
 
@@ -174,7 +174,7 @@ def estimate_cost(
         and is **not** added to ``total_excl_serve_usd``.
 
     Example:
-        >>> from subterranean.cloud._recipes import get_recipe
+        >>> from agent2model.cloud._recipes import get_recipe
         >>> est = estimate_cost(get_recipe("travel"))
         >>> est.total_excl_serve_usd > 0
         True
@@ -257,7 +257,7 @@ def format_cost_estimate(est: CostEstimate, recipe: Recipe) -> str:
         prompt. Always ends with the ``--yes`` skip hint.
 
     Example:
-        >>> from subterranean.cloud._recipes import get_recipe
+        >>> from agent2model.cloud._recipes import get_recipe
         >>> text = format_cost_estimate(estimate_cost(get_recipe('travel')),
         ...                              get_recipe('travel'))
         >>> 'TOTAL' in text
@@ -321,7 +321,7 @@ def confirm_cost_or_exit(
             ``yes`` is False.
 
     Example:
-        >>> from subterranean.cloud._recipes import get_recipe
+        >>> from agent2model.cloud._recipes import get_recipe
         >>> est = confirm_cost_or_exit(get_recipe('travel'), yes=True,
         ...     printer=lambda *_a, **_k: None)
         >>> est.total_excl_serve_usd > 0

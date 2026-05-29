@@ -8,14 +8,14 @@ Before you run anything cloud-side, you need:
    A full 3B reproduction uses ~$15–50 of Claude tokens; an 8B run uses ~$40–120.
 3. *(Optional)* **A Hugging Face token** if your base model is gated (Qwen 2.5/3 are not).
 
-Run `subterranean cloud setup` once to wire all three together, then `subterranean cloud doctor`
+Run `agent2model cloud setup` once to wire all three together, then `agent2model cloud doctor`
 any time you're unsure if things are configured.
 
 ## One-line setup
 
 ```bash
-pip install "subterranean-agents[cloud]"
-subterranean cloud setup
+pip install "agent2model[cloud]"
+agent2model cloud setup
 ```
 
 The wizard is idempotent — each step inspects current state and skips itself if
@@ -29,13 +29,13 @@ the precondition is already met. It will:
    `anthropic-secret` Modal Secret via `modal.Secret.create_deployed`. Your
    key is sent only to Modal — never printed or logged.
 
-After the wizard, the same `subterranean cloud doctor` checklist is printed as
+After the wizard, the same `agent2model cloud doctor` checklist is printed as
 a final summary so you can see in one view what passed.
 
 ## Verify
 
 ```bash
-subterranean cloud doctor
+agent2model cloud doctor
 ```
 
 The doctor command is a read-only preflight — safe to run any time, costs
@@ -55,7 +55,7 @@ critical check failed — informational results are advisory.
 
 !!! note "Local key vs. Modal secret"
     Check 4 hits the `ANTHROPIC_API_KEY` env var on **your laptop** (used by
-    `subterranean generate` and `subterranean eval` when running locally).
+    `agent2model generate` and `agent2model eval` when running locally).
     Check 3 verifies the **Modal-side** secret, which is what the Modal workers
     in `cloud run` and the `reproduce_*` entrypoints use. They are independent;
     rotating one does not rotate the other.
@@ -66,10 +66,10 @@ Once doctor is green you can launch the full pipeline:
 
 ```bash
 # A user-supplied flowchart (YAML or LangGraph .py):
-subterranean cloud run my_workflow.yaml --size 3b --n 2000 --epochs 20
+agent2model cloud run my_workflow.yaml --size 3b --n 2000 --epochs 20
 
 # Or a paper reproduction:
-modal run -m subterranean.cloud.modal_app::reproduce_travel
+modal run -m agent2model.cloud.modal_app::reproduce_travel
 ```
 
 Every cloud entrypoint prints a **cost estimate** and asks for confirmation
@@ -115,11 +115,11 @@ endpoint is live and is **not** included in the totals above.
 ## Troubleshooting
 
 - **`doctor` says modal is not installed.** Run
-  `pip install "subterranean-agents[cloud]"`.
+  `pip install "agent2model[cloud]"`.
 - **`doctor` says the modal token is missing.** Run `modal token new`. The
   Modal CLI opens a browser, you authenticate, and control returns.
 - **`doctor` says the `anthropic-secret` does not exist.** Run
-  `subterranean cloud setup` and complete the third step, or create the secret
+  `agent2model cloud setup` and complete the third step, or create the secret
   manually at [modal.com/secrets](https://modal.com/secrets) (named exactly
   `anthropic-secret`, with key `ANTHROPIC_API_KEY`).
 - **The Anthropic ping fails.** The local `ANTHROPIC_API_KEY` is either unset,

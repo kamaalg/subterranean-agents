@@ -1,8 +1,8 @@
 """Load a Flowchart IR from YAML.
 
 Structural errors (unknown fields, bad types) surface as
-:class:`~subterranean.exceptions.FlowchartValidationError` with a readable message;
-graph-level invariants are checked separately by :func:`subterranean.ir.validator.validate`.
+:class:`~agent2model.exceptions.FlowchartValidationError` with a readable message;
+graph-level invariants are checked separately by :func:`agent2model.ir.validator.validate`.
 """
 
 from __future__ import annotations
@@ -13,8 +13,8 @@ import yaml
 from pydantic import ValidationError
 from pydantic_core import ErrorDetails
 
-from subterranean.exceptions import FlowchartValidationError
-from subterranean.ir.schema import Flowchart
+from agent2model.exceptions import FlowchartValidationError
+from agent2model.ir.schema import Flowchart
 
 
 def load_flowchart(path: str | Path) -> Flowchart:
@@ -24,7 +24,7 @@ def load_flowchart(path: str | Path) -> Flowchart:
         path: Path to the ``.yaml`` flowchart spec.
 
     Returns:
-        The parsed :class:`~subterranean.ir.schema.Flowchart`.
+        The parsed :class:`~agent2model.ir.schema.Flowchart`.
 
     Raises:
         FlowchartValidationError: If the file is missing, not valid YAML, not a
@@ -68,7 +68,7 @@ def load_flowchart_from_string(text: str) -> Flowchart:
         text: YAML document.
 
     Returns:
-        The parsed :class:`~subterranean.ir.schema.Flowchart`.
+        The parsed :class:`~agent2model.ir.schema.Flowchart`.
 
     Raises:
         FlowchartValidationError: On invalid YAML or schema violations.

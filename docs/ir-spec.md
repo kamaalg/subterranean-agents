@@ -1,7 +1,7 @@
 # IR spec reference
 
 The Flowchart IR is the library's public contract: a YAML description of a
-procedure. `subterranean compile` parses it, validates it, and emits the
+procedure. `agent2model compile` parses it, validates it, and emits the
 canonical normalised form to `<out>/flowchart.json`.
 
 ## Top-level fields
@@ -86,7 +86,7 @@ scenario_variables:
 
 ## Invariants
 
-Enforced by `subterranean.ir.validator`; violations print one human-readable line
+Enforced by `agent2model.ir.validator`; violations print one human-readable line
 each and exit non-zero:
 
 1. `start` names an existing node.
@@ -102,17 +102,17 @@ You don't have to write YAML by hand. Point `compile` at a `.py` file that
 defines a LangGraph `StateGraph`:
 
 ```bash
-subterranean compile path/to/graph.py --out build/mine
+agent2model compile path/to/graph.py --out build/mine
 ```
 
 The adapter recovers structure only — every agent node gets a `TODO` placeholder
 prompt you fill in before generating data. See the
-[`langgraph_demo` example](https://github.com/subterranean-agents/subterranean/tree/main/examples/langgraph_demo)
+[`langgraph_demo` example](https://github.com/kamaalg/agent2model/tree/main/examples/langgraph_demo)
 for the discovery contract and mapping rules.
 
 ## Example
 
 A complete, valid flowchart lives at
-[`examples/travel_booking/flowchart.yaml`](https://github.com/subterranean-agents/subterranean/blob/main/examples/travel_booking/flowchart.yaml).
+[`examples/travel_booking/flowchart.yaml`](https://github.com/kamaalg/agent2model/blob/main/examples/travel_booking/flowchart.yaml).
 The larger `insurance_claims` example (55+ nodes, eight terminals) shows how the
 same contract scales to deep, many-branch procedures.

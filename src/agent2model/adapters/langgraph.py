@@ -1,7 +1,7 @@
 """LangGraph ``StateGraph`` → Flowchart IR adapter.
 
 This adapter gives you the *structure* of a procedure for free: it maps a
-LangGraph graph's nodes and edges onto the canonical :class:`~subterranean.ir.schema.Flowchart`
+LangGraph graph's nodes and edges onto the canonical :class:`~agent2model.ir.schema.Flowchart`
 so you don't have to hand-write YAML. It cannot, however, recover the
 *natural-language instructions* a node should follow — a LangGraph node is a
 Python callable, not a prompt. Every ``agent`` node therefore gets a TODO
@@ -16,13 +16,13 @@ Mapping rules
 - LangGraph's ``END`` (``"__end__"``) and any other sink reachable from the graph
   become IR terminal nodes with ``terminal: success`` (we cannot infer
   abandonment/escalation from structure alone, so we default to ``success``).
-- Plain edges (``add_edge``) become unconditional :class:`~subterranean.ir.schema.Edge`.
+- Plain edges (``add_edge``) become unconditional :class:`~agent2model.ir.schema.Edge`.
 - Conditional edges (``add_conditional_edges``) turn the source node into a
   ``decision`` node. Each branch becomes a guarded edge whose ``when`` label is the
   path-map key (e.g. ``add_conditional_edges("a", route, {"yes": "b"})`` yields a
   ``when: "yes"`` edge to ``b``). A conditional edge declared *without* a path map
   has statically-unknowable targets, which we cannot represent — that raises a
-  :class:`~subterranean.exceptions.FlowchartValidationError` asking for a path map.
+  :class:`~agent2model.exceptions.FlowchartValidationError` asking for a path map.
 
 ``.py`` loader contract
 ------------------------
@@ -36,7 +36,7 @@ graph in this order:
 The object found may be a :class:`~langgraph.graph.StateGraph` or a compiled
 graph (``CompiledStateGraph``); compiled graphs are unwrapped via their
 ``.builder`` attribute. If none is found, a
-:class:`~subterranean.exceptions.FlowchartValidationError` is raised.
+:class:`~agent2model.exceptions.FlowchartValidationError` is raised.
 """
 
 from __future__ import annotations
@@ -49,9 +49,9 @@ from typing import Any
 import yaml
 from langgraph.graph import END, START, StateGraph
 
-from subterranean.exceptions import FlowchartValidationError
-from subterranean.ir.schema import Edge, Flowchart, Node
-from subterranean.logging import logger
+from agent2model.exceptions import FlowchartValidationError
+from agent2model.ir.schema import Edge, Flowchart, Node
+from agent2model.logging import logger
 
 AnyStateGraph = StateGraph[Any, Any, Any, Any]
 """``StateGraph`` with its generic state/context/input/output params erased."""
@@ -103,7 +103,7 @@ def flowchart_from_stategraph(
 
     Returns:
         A :class:`Flowchart`. It is well-formed but not graph-validated here; run
-        :func:`subterranean.ir.validator.validate` on it.
+        :func:`agent2model.ir.validator.validate` on it.
 
     Raises:
         FlowchartValidationError: If ``graph`` is not a ``StateGraph``/compiled
@@ -211,7 +211,7 @@ def load_stategraph_from_pyfile(path: Path) -> AnyStateGraph:
     if not path.exists():
         raise FlowchartValidationError(f"No such file: {path}")
 
-    module_name = f"_subterranean_lg_{path.stem}"
+    module_name = f"_agent2model_lg_{path.stem}"
     spec = importlib.util.spec_from_file_location(module_name, path)
     if spec is None or spec.loader is None:
         raise FlowchartValidationError(f"Could not load Python module from {path}.")
@@ -287,7 +287,7 @@ def langgraph_to_yaml_text(path: Path, *, name: str | None = None) -> str:
 
     Convenience composition of :func:`load_stategraph_from_pyfile`,
     :func:`flowchart_from_stategraph`, and :func:`flowchart_to_yaml_text`. Used
-    by the generic Modal ``run`` entrypoint and the ``subterranean cloud run``
+    by the generic Modal ``run`` entrypoint and the ``agent2model cloud run``
     CLI so a user can point at either a ``.py`` LangGraph file or a YAML file.
 
     Args:

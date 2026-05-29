@@ -22,7 +22,7 @@ from __future__ import annotations
 import random
 from typing import Any
 
-from subterranean.ir.schema import Flowchart
+from agent2model.ir.schema import Flowchart
 
 Scenario = dict[str, Any]
 """A single sampled scenario: variable name -> concrete value."""

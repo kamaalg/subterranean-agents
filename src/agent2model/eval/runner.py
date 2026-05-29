@@ -30,22 +30,22 @@ from rich.progress import (
 )
 from scipy import stats
 
-from subterranean.eval.judge import Judge, JudgeConfig, JudgeVerdict
-from subterranean.eval.rubric import RUBRIC, CriterionName, Rubric
-from subterranean.eval.simulator import UserSimulator
-from subterranean.exceptions import EvalBudgetExceeded
-from subterranean.generation.generator import DEFAULT_MODEL, CostTracker
-from subterranean.generation.scenarios import sample_scenario
+from agent2model.eval.judge import Judge, JudgeConfig, JudgeVerdict
+from agent2model.eval.rubric import RUBRIC, CriterionName, Rubric
+from agent2model.eval.simulator import UserSimulator
+from agent2model.exceptions import EvalBudgetExceeded
+from agent2model.generation.generator import DEFAULT_MODEL, CostTracker
+from agent2model.generation.scenarios import sample_scenario
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from anthropic import AsyncAnthropic
 
-    from subterranean.eval.baselines import Condition
-    from subterranean.generation.formatter import Conversation
-    from subterranean.generation.scenarios import Scenario
-    from subterranean.ir.schema import Flowchart
+    from agent2model.eval.baselines import Condition
+    from agent2model.generation.formatter import Conversation
+    from agent2model.generation.scenarios import Scenario
+    from agent2model.ir.schema import Flowchart
 
 __all__ = [
     "ConditionResult",
@@ -443,7 +443,7 @@ def estimate_eval_cost(
     Returns:
         Estimated total cost in USD.
     """
-    from subterranean.generation.generator import _FALLBACK_PRICING, _PRICING
+    from agent2model.generation.generator import _FALLBACK_PRICING, _PRICING
 
     rates = _PRICING.get(config.judge.model, _FALLBACK_PRICING)
     per_call_in, per_call_out = 700, 200
@@ -514,7 +514,7 @@ class EvalRunner:
     async def _run_one(
         self, condition: Condition, scenario: Scenario
     ) -> tuple[Conversation, JudgeVerdict, float]:
-        from subterranean.eval.baselines import ConditionContext
+        from agent2model.eval.baselines import ConditionContext
 
         start = time.perf_counter()
         simulator = UserSimulator(

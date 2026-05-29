@@ -7,8 +7,8 @@ below the paper target in ``benchmarks/targets.json``.
 These require a GPU-trained model and a real eval run, neither of which exists in
 CI by default. They are therefore **skipped** unless both:
 
-- ``SUBTERRANEAN_E2E=1`` is set, and
-- ``SUBTERRANEAN_E2E_REPORTS`` points at a directory containing
+- ``AGENT2MODEL_E2E=1`` is set, and
+- ``AGENT2MODEL_E2E_REPORTS`` points at a directory containing
   ``<example>/eval_report.json`` for each reproduced example.
 
 The pure regression math is covered independently by
@@ -39,9 +39,9 @@ pytestmark = pytest.mark.e2e
 
 def _reports_dir() -> Path | None:
     """Resolve the reports directory from env, or ``None`` if e2e is disabled."""
-    if os.environ.get("SUBTERRANEAN_E2E") != "1":
+    if os.environ.get("AGENT2MODEL_E2E") != "1":
         return None
-    raw = os.environ.get("SUBTERRANEAN_E2E_REPORTS")
+    raw = os.environ.get("AGENT2MODEL_E2E_REPORTS")
     if not raw:
         return None
     path = Path(raw)
@@ -54,8 +54,8 @@ def test_reproduction_within_tolerance(example: str) -> None:
     reports_dir = _reports_dir()
     if reports_dir is None:
         pytest.skip(
-            "e2e reproduction requires a GPU-trained model: set SUBTERRANEAN_E2E=1 "
-            "and SUBTERRANEAN_E2E_REPORTS=<dir with <example>/eval_report.json>."
+            "e2e reproduction requires a GPU-trained model: set AGENT2MODEL_E2E=1 "
+            "and AGENT2MODEL_E2E_REPORTS=<dir with <example>/eval_report.json>."
         )
 
     report_path = reports_dir / example / "eval_report.json"

@@ -32,28 +32,28 @@ DeepSpeed ZeRO-3 across 8 GPUs (run it on Modal unless you have that locally).
 
 ```bash
 # 1. Compile + validate.
-subterranean compile examples/zoom_support/flowchart.yaml --out build/zoom
+agent2model compile examples/zoom_support/flowchart.yaml --out build/zoom
 
 # 2. Generate synthetic data (medium volume, ~6k convos).
-subterranean generate build/zoom --n 6000 --model claude-sonnet-4-5 --budget 60
+agent2model generate build/zoom --n 6000 --model claude-sonnet-4-5 --budget 60
 
 # 3. Full fine-tune the 8B base model (ZeRO-3).
-subterranean train build/zoom --base Qwen/Qwen3-8B --size 8b --epochs 10
+agent2model train build/zoom --base Qwen/Qwen3-8B --size 8b --epochs 10
 
 # 4. Evaluate against baselines (or serve).
-subterranean eval build/zoom --baselines in_context,langgraph --n 200
-subterranean serve build/zoom --port 8000
+agent2model eval build/zoom --baselines in_context,langgraph --n 200
+agent2model serve build/zoom --port 8000
 ```
 
 No local GPU? Run it on Modal:
 
 ```bash
-modal run -m subterranean.cloud.modal_app::reproduce_zoom
+modal run -m agent2model.cloud.modal_app::reproduce_zoom
 ```
 
 ## Expected results
 
-Per-criterion means (1–5), `n=200`, Subterranean (compiled 8B) vs. the paper.
+Per-criterion means (1–5), `n=200`, agent2model (compiled 8B) vs. the paper.
 Fill in **Your run** from `build/zoom/eval_report.json`. The release gate fails
 if any criterion drops >5% below the paper number.
 

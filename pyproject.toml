@@ -3,14 +3,14 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "subterranean-agents"
+name = "agent2model"
 version = "0.1.0.dev0"
-description = "Compile agentic workflows into LLM weights: fine-tune procedures directly into small models so they self-orchestrate."
+description = "Turn your LangGraph/CrewAI agent into a small fine-tuned model that runs with no orchestrator — near-frontier quality at a fraction of the inference cost."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
-authors = [{ name = "Subterranean Agents contributors" }]
-keywords = ["llm", "agents", "fine-tuning", "distillation", "langgraph"]
+authors = [{ name = "agent2model contributors" }]
+keywords = ["agent", "llm", "fine-tuning", "distillation", "langgraph", "crewai", "small-models", "inference-cost"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -75,15 +75,15 @@ dev = [
 ]
 
 [project.scripts]
-subterranean = "subterranean.cli:app"
+agent2model = "agent2model.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/subterranean-agents/subterranean"
-Documentation = "https://subterranean-agents.github.io/subterranean"
-Repository = "https://github.com/subterranean-agents/subterranean"
+Homepage = "https://github.com/kamaalg/agent2model"
+Documentation = "https://kamaalg.github.io/agent2model"
+Repository = "https://github.com/kamaalg/agent2model"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/subterranean"]
+packages = ["src/agent2model"]
 
 # ----------------------------------------------------------------------------
 # Tooling
@@ -99,7 +99,7 @@ select = ["E", "F", "I", "UP", "B", "SIM", "C4", "RUF"]
 ignore = ["E501"]  # line length handled by black/formatter
 
 [tool.ruff.lint.isort]
-known-first-party = ["subterranean"]
+known-first-party = ["agent2model"]
 section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
 
 [tool.black]
@@ -111,7 +111,7 @@ python_version = "3.11"
 strict = true
 warn_unreachable = true
 plugins = ["pydantic.mypy"]
-files = ["src/subterranean"]
+files = ["src/agent2model"]
 
 [[tool.mypy.overrides]]
 # Optional-extra deps that ship no/poor stubs; only imported behind extras.
@@ -149,7 +149,7 @@ markers = [
 addopts = "-ra --strict-markers"
 
 [tool.coverage.run]
-source = ["subterranean"]
+source = ["agent2model"]
 branch = true
 
 [tool.commitizen]

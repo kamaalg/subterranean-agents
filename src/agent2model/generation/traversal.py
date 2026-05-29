@@ -17,8 +17,8 @@ import random
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from subterranean.exceptions import FlowchartValidationError
-from subterranean.ir.schema import Edge, Flowchart
+from agent2model.exceptions import FlowchartValidationError
+from agent2model.ir.schema import Edge, Flowchart
 
 
 class TraversalConfig(BaseModel):
@@ -65,7 +65,7 @@ def sample_path(
 
     Args:
         flowchart: A flowchart that has already passed
-            :func:`subterranean.ir.validator.validate`.
+            :func:`agent2model.ir.validator.validate`.
         rng: Seeded random source. The same seed yields the same path.
         config: Edge-weighting and step-bound configuration. Defaults to uniform
             weights when omitted.

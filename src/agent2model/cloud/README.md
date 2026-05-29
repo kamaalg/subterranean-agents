@@ -1,11 +1,11 @@
 # Cloud recipes
 
-Run the whole `subterranean` pipeline — generate, train, evaluate, serve — without
+Run the whole `agent2model` pipeline — generate, train, evaluate, serve — without
 a local GPU. **[Modal](https://modal.com) is the primary recipe** (one command);
 [RunPod](./runpod/README.md) is the secondary, more manual one.
 
 This `cloud/` package is **decoupled from the core library**: the core never
-imports `cloud`, and `import subterranean` / `import subterranean.cloud` work
+imports `cloud`, and `import agent2model` / `import agent2model.cloud` work
 *without* `modal` installed. The Modal app itself (`modal_app.py`) does require
 `modal` (its `@app.function` decorators need it at import time), so it lives behind
 the `[cloud]` extra. All pure recipe logic — which image/GPU/training-config each
@@ -15,7 +15,7 @@ modal import** and is what the unit tests exercise.
 ## Install
 
 ```bash
-pip install "subterranean-agents[cloud]"   # installs modal
+pip install "agent2model[cloud]"   # installs modal
 modal token new                             # one-time Modal auth
 ```
 
@@ -29,20 +29,20 @@ modal secret create anthropic-secret ANTHROPIC_API_KEY=sk-ant-...
 ```
 
 The app also creates two persistent volumes on first run:
-`subterranean-build` (flowchart IR, `dataset.jsonl`, eval reports) and
-`subterranean-models` (fine-tuned weights).
+`agent2model-build` (flowchart IR, `dataset.jsonl`, eval reports) and
+`agent2model-models` (fine-tuned weights).
 
 ## Reproduce a paper experiment (the headline demo)
 
 ```bash
-modal run -m subterranean.cloud.modal_app::reproduce_travel
-modal run -m subterranean.cloud.modal_app::reproduce_zoom
-modal run -m subterranean.cloud.modal_app::reproduce_insurance
+modal run -m agent2model.cloud.modal_app::reproduce_travel
+modal run -m agent2model.cloud.modal_app::reproduce_zoom
+modal run -m agent2model.cloud.modal_app::reproduce_insurance
 ```
 
 Each entrypoint chains **generate → train → evaluate** end to end. You must first
 have the compiled flowchart on the build volume at `/build/<example>/flowchart.json`
-(`subterranean compile <yaml> --out build/<example>` then upload), matching the
+(`agent2model compile <yaml> --out build/<example>` then upload), matching the
 example name.
 
 Per-example config (mirrors arXiv:2605.22502v1):
@@ -70,7 +70,7 @@ The `serve` function is a `@modal.web_server` on port 8000 with autoscaling
 `/v1/chat/completions` and `/v1/models`. Deploy it with:
 
 ```bash
-modal deploy -m subterranean.cloud.modal_app
+modal deploy -m agent2model.cloud.modal_app
 ```
 
 ## RunPod

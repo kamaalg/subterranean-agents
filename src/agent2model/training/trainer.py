@@ -11,7 +11,7 @@ The orchestration logic is factored into small, pure, unit-testable functions:
 * :func:`select_best_checkpoint` — pick the checkpoint with the lowest held-out
   eval loss.
 * :func:`is_diverged` — detect NaN/Inf eval losses (raises
-  :class:`~subterranean.exceptions.TrainingDivergedError` via :func:`check_divergence`).
+  :class:`~agent2model.exceptions.TrainingDivergedError` via :func:`check_divergence`).
 * :func:`reject_lora` — refuse LoRA with a link to Dennis et al. 2026b.
 
 Only :func:`train` touches the GPU stack; it is exercised end-to-end on Modal
@@ -30,9 +30,9 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict
 
-from subterranean.exceptions import TrainingDivergedError
-from subterranean.logging import logger
-from subterranean.training.config import DENNIS_2026B, TrainingConfig
+from agent2model.exceptions import TrainingDivergedError
+from agent2model.logging import logger
+from agent2model.training.config import DENNIS_2026B, TrainingConfig
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -72,11 +72,11 @@ def reject_lora(*, use_lora: bool) -> None:
         >>> reject_lora(use_lora=True)
         Traceback (most recent call last):
         ...
-        ValueError: LoRA is not supported in subterranean v1...
+        ValueError: LoRA is not supported in agent2model v1...
     """
     if use_lora:
         raise ValueError(
-            "LoRA is not supported in subterranean v1: it fails to internalise "
+            "LoRA is not supported in agent2model v1: it fails to internalise "
             f"procedural workflows. See {DENNIS_2026B}. Use full fine-tuning instead."
         )
 

@@ -15,15 +15,15 @@ from pathlib import Path
 
 import pytest
 
-from subterranean.exceptions import TrainingDivergedError
-from subterranean.training.config import (
+from agent2model.exceptions import TrainingDivergedError
+from agent2model.training.config import (
     DEFAULT_3B_MODEL,
     DEFAULT_8B_MODEL,
     TrainingConfig,
 )
-from subterranean.training.deepspeed import ZERO3_CONFIG_PATH
-from subterranean.training.launch import build_accelerate_command
-from subterranean.training.trainer import (
+from agent2model.training.deepspeed import ZERO3_CONFIG_PATH
+from agent2model.training.launch import build_accelerate_command
+from agent2model.training.trainer import (
     CheckpointInfo,
     _adapt_sft_kwargs,
     check_divergence,
@@ -281,7 +281,7 @@ def test_zero3_config_is_valid_json_stage3() -> None:
 def test_train_raises_helpful_error_without_ml_stack(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from subterranean.training import trainer
+    from agent2model.training import trainer
 
     def _boom() -> None:
         raise RuntimeError(

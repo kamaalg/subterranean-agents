@@ -9,7 +9,7 @@ is the default and the only backend that must work locally.
 Two rubric rules are enforced *after* parsing, not left to the model:
 
 - the **Graceful-Handling cap** (see
-  :func:`subterranean.eval.rubric.apply_graceful_handling_cap`), and
+  :func:`agent2model.eval.rubric.apply_graceful_handling_cap`), and
 - score clamping into ``[1, 5]`` so a stray out-of-range value can never poison
   the statistics.
 
@@ -27,7 +27,7 @@ from anthropic import AsyncAnthropic
 from anthropic.types import TextBlock
 from pydantic import BaseModel, ConfigDict, Field
 
-from subterranean.eval.rubric import (
+from agent2model.eval.rubric import (
     MAX_SCORE,
     MIN_SCORE,
     RUBRIC,
@@ -35,16 +35,16 @@ from subterranean.eval.rubric import (
     Rubric,
     apply_graceful_handling_cap,
 )
-from subterranean.exceptions import EvalError
-from subterranean.generation.generator import DEFAULT_MODEL, CostTracker
+from agent2model.exceptions import EvalError
+from agent2model.generation.generator import DEFAULT_MODEL, CostTracker
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from anthropic.types import Message
 
-    from subterranean.generation.formatter import Turn
-    from subterranean.generation.scenarios import Scenario
+    from agent2model.generation.formatter import Turn
+    from agent2model.generation.scenarios import Scenario
 
 __all__ = ["Judge", "JudgeConfig", "JudgeVerdict", "parse_judge_json"]
 
@@ -77,7 +77,7 @@ class JudgeConfig(BaseModel):
     Attributes:
         backend: ``anthropic`` (default, Claude) or ``openai`` (GPT-4).
         model: Model id for the chosen backend. Defaults to
-            :data:`~subterranean.generation.generator.DEFAULT_MODEL` for
+            :data:`~agent2model.generation.generator.DEFAULT_MODEL` for
             Anthropic.
         max_tokens: ``max_tokens`` per judge call.
     """

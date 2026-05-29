@@ -10,8 +10,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from subterranean.training.config import TrainingConfig
-from subterranean.training.deepspeed import ZERO3_CONFIG_PATH
+from agent2model.training.config import TrainingConfig
+from agent2model.training.deepspeed import ZERO3_CONFIG_PATH
 
 
 def build_accelerate_command(
@@ -30,7 +30,7 @@ def build_accelerate_command(
             launch topology).
         train_script: Path to the Python entry point ``accelerate`` should run.
         deepspeed_config: Override DeepSpeed config path; defaults to the bundled
-            :data:`~subterranean.training.deepspeed.ZERO3_CONFIG_PATH` for the 8B
+            :data:`~agent2model.training.deepspeed.ZERO3_CONFIG_PATH` for the 8B
             size and to ``None`` (no DeepSpeed) for the 3B size.
 
     Returns:

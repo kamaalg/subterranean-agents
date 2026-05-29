@@ -16,7 +16,7 @@ Conditions
 - :class:`SameModelOrchCondition` (``same_model_orch``) — the same base model as
   the compiled one, but orchestrated, isolating the effect of compilation.
 - :class:`CompiledCondition` (``compiled``) — the served fine-tuned model, reached
-  through an OpenAI-compatible client pointed at ``subterranean serve``.
+  through an OpenAI-compatible client pointed at ``agent2model serve``.
 
 Import safety: every condition is importable with only the core deps. Conditions
 that need an external service (``compiled`` needs a served model; ``langgraph``
@@ -31,16 +31,16 @@ from typing import TYPE_CHECKING, Any, NotRequired, Protocol, TypedDict, runtime
 from anthropic import AsyncAnthropic
 from anthropic.types import MessageParam, TextBlock
 
-from subterranean.eval.simulator import UserSimulator
-from subterranean.exceptions import EvalError
-from subterranean.generation.formatter import Conversation, Turn
-from subterranean.generation.generator import DEFAULT_MODEL, CostTracker
+from agent2model.eval.simulator import UserSimulator
+from agent2model.exceptions import EvalError
+from agent2model.generation.formatter import Conversation, Turn
+from agent2model.generation.generator import DEFAULT_MODEL, CostTracker
 
 if TYPE_CHECKING:
     from anthropic.types import Message
 
-    from subterranean.generation.scenarios import Scenario
-    from subterranean.ir.schema import Flowchart
+    from agent2model.generation.scenarios import Scenario
+    from agent2model.ir.schema import Flowchart
 
 __all__ = [
     "BASELINE_NAMES",
@@ -380,7 +380,7 @@ class LangGraphCondition:
 class _OpenAICompatResponder:
     """Agent responder talking to an OpenAI-compatible chat endpoint.
 
-    Used for the compiled (served) model: ``subterranean serve`` exposes
+    Used for the compiled (served) model: ``agent2model serve`` exposes
     ``/v1/chat/completions``, so we drive it with an async OpenAI client pointed
     at that base URL.
     """
@@ -423,7 +423,7 @@ class CompiledCondition:
 
     The compiled model self-orchestrates from its weights, so **no flowchart is
     placed in its prompt** — that is the entire point of compilation. It is
-    reached through an OpenAI-compatible client pointed at ``subterranean serve``
+    reached through an OpenAI-compatible client pointed at ``agent2model serve``
     (``served_url``). Requires the optional ``openai`` package and a running
     served model at run time; the class imports without either.
     """
@@ -506,7 +506,7 @@ def make_condition(
         if not served_url:
             raise EvalError(
                 "The 'compiled' condition requires --served-url pointing at a running "
-                "`subterranean serve` endpoint."
+                "`agent2model serve` endpoint."
             )
         return CompiledCondition(model=compiled_model, served_url=served_url)
     raise EvalError(

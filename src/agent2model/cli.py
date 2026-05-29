@@ -5,8 +5,8 @@ The canonical user journey is ``compile`` → ``generate`` → ``train`` →
 the actual cost after, and exits with an actionable message on typed failures.
 
 A ``cloud`` subcommand group wraps the generic Modal entrypoint:
-``subterranean cloud run my_workflow.yaml --size 3b`` simply ``subprocess``-
-invokes ``modal run -m subterranean.cloud.modal_app::run -- ...`` with the
+``agent2model cloud run my_workflow.yaml --size 3b`` simply ``subprocess``-
+invokes ``modal run -m agent2model.cloud.modal_app::run -- ...`` with the
 typed flags mapped through, so users don't have to remember the ``modal run
 -m`` incantation.
 """
@@ -21,32 +21,32 @@ from typing import Annotated, Any
 
 import typer
 
-from subterranean.adapters.langgraph import (
+from agent2model.adapters.langgraph import (
     flowchart_from_stategraph,
     load_stategraph_from_pyfile,
 )
-from subterranean.exceptions import (
+from agent2model.exceptions import (
     FlowchartValidationError,
     GenerationBudgetExceeded,
     ServingError,
     TrainingDivergedError,
 )
-from subterranean.generation.formatter import write_dataset
-from subterranean.generation.generator import (
+from agent2model.generation.formatter import write_dataset
+from agent2model.generation.generator import (
     DEFAULT_MODEL,
     ConversationGenerator,
     GenerationConfig,
     estimate_cost,
 )
-from subterranean.ir.loader import load_flowchart
-from subterranean.ir.schema import Flowchart
-from subterranean.ir.validator import validate
-from subterranean.logging import configure_logging, logger
-from subterranean.training.config import DENNIS_2026B, TrainingConfig
+from agent2model.ir.loader import load_flowchart
+from agent2model.ir.schema import Flowchart
+from agent2model.ir.validator import validate
+from agent2model.logging import configure_logging, logger
+from agent2model.training.config import DENNIS_2026B, TrainingConfig
 
 app = typer.Typer(
-    name="subterranean",
-    help="Compile agentic workflows into LLM weights.",
+    name="agent2model",
+    help="Turn your LangGraph/CrewAI agent into a small model that runs with no orchestrator.",
     no_args_is_help=True,
     add_completion=False,
 )
@@ -112,7 +112,7 @@ def _load_compiled_flowchart(build_dir: Path) -> Flowchart:
     """Load and graph-validate the compiled ``flowchart.json`` from a build dir."""
     ir_path = build_dir / "flowchart.json"
     if not ir_path.exists():
-        logger.error(f"No compiled flowchart at {ir_path}. Run `subterranean compile` first.")
+        logger.error(f"No compiled flowchart at {ir_path}. Run `agent2model compile` first.")
         raise typer.Exit(code=1)
     flowchart = Flowchart.model_validate(json.loads(ir_path.read_text(encoding="utf-8")))
     validate(flowchart)
@@ -200,7 +200,7 @@ def train(
     """Fine-tune a base model on generated data with the paper's recipe.
 
     Reads ``<BUILD_DIR>/dataset.jsonl`` (HF chat-template JSONL from
-    ``subterranean generate``), builds a :class:`TrainingConfig` from the chosen
+    ``agent2model generate``), builds a :class:`TrainingConfig` from the chosen
     ``--size`` preset, and runs full-parameter SFT, saving the best checkpoint
     (by held-out eval loss) to ``<BUILD_DIR>/model/best``.
 
@@ -215,16 +215,14 @@ def train(
 
     if lora:
         logger.error(
-            "LoRA is not supported in subterranean v1: it fails to internalise procedural "
+            "LoRA is not supported in agent2model v1: it fails to internalise procedural "
             f"workflows. See {DENNIS_2026B}. Re-run without --lora to use full fine-tuning."
         )
         raise typer.Exit(code=2)
 
     dataset_path = build_dir / "dataset.jsonl"
     if not dataset_path.exists():
-        logger.error(
-            f"No dataset at {dataset_path}. Run `subterranean generate {build_dir}` first."
-        )
+        logger.error(f"No dataset at {dataset_path}. Run `agent2model generate {build_dir}` first.")
         raise typer.Exit(code=1)
 
     output_dir = str(build_dir / "model")
@@ -250,8 +248,8 @@ def train(
             "(launch via `accelerate launch`, e.g. on a Modal 8x A100 host)."
         )
 
-    # Lazy import: keeps `subterranean train --help` working without the ML stack.
-    from subterranean.training.trainer import train as run_training
+    # Lazy import: keeps `agent2model train --help` working without the ML stack.
+    from agent2model.training.trainer import train as run_training
 
     try:
         best = run_training(config, dataset_path)
@@ -289,7 +287,7 @@ def eval(
         str | None,
         typer.Option(
             "--served-url",
-            help="OpenAI-compatible base URL of a `subterranean serve` endpoint; "
+            help="OpenAI-compatible base URL of a `agent2model serve` endpoint; "
             "adds the served compiled model as a condition.",
         ),
     ] = None,
@@ -309,11 +307,11 @@ def eval(
     """
     import asyncio
 
-    from subterranean.eval.baselines import make_condition
-    from subterranean.eval.judge import Judge, JudgeConfig
-    from subterranean.eval.report import write_json_report, write_pdf_report
-    from subterranean.eval.runner import EvalConfig, EvalRunner, estimate_eval_cost
-    from subterranean.exceptions import EvalBudgetExceeded, EvalError
+    from agent2model.eval.baselines import make_condition
+    from agent2model.eval.judge import Judge, JudgeConfig
+    from agent2model.eval.report import write_json_report, write_pdf_report
+    from agent2model.eval.runner import EvalConfig, EvalRunner, estimate_eval_cost
+    from agent2model.exceptions import EvalBudgetExceeded, EvalError
 
     try:
         flowchart = _load_compiled_flowchart(build_dir)
@@ -383,14 +381,14 @@ def serve(
     """Serve a compiled model via an OpenAI-compatible vLLM endpoint.
 
     Resolves the servable checkpoint under ``<BUILD_DIR>`` (prefers
-    ``<BUILD_DIR>/best`` from ``subterranean train``, falling back to the
+    ``<BUILD_DIR>/best`` from ``agent2model train``, falling back to the
     directory itself), prints what it is about to serve and on what address,
     then launches vLLM's OpenAI-compatible API server (``/v1/chat/completions``,
     ``/v1/models``). vLLM is GPU/CUDA-only; if it is not installed the command
     exits with an actionable install hint rather than crashing.
     """
-    from subterranean.serve.vllm_server import resolve_model_path
-    from subterranean.serve.vllm_server import serve as run_server
+    from agent2model.serve.vllm_server import resolve_model_path
+    from agent2model.serve.vllm_server import serve as run_server
 
     try:
         model_path = resolve_model_path(build_dir)
@@ -409,9 +407,9 @@ def serve(
         raise typer.Exit(code=1) from exc
 
 
-#: Default modal-run target for ``subterranean cloud run``. The ``::run`` suffix
+#: Default modal-run target for ``agent2model cloud run``. The ``::run`` suffix
 #: selects the generic ``@app.local_entrypoint`` in ``modal_app.py``.
-MODAL_RUN_TARGET = "subterranean.cloud.modal_app::run"
+MODAL_RUN_TARGET = "agent2model.cloud.modal_app::run"
 
 
 def _build_modal_run_argv(
@@ -431,7 +429,7 @@ def _build_modal_run_argv(
     """Build the argv to invoke the generic Modal entrypoint via ``modal run -m``.
 
     Pure helper kept separate so unit tests can assert on the constructed command
-    without spawning Modal. Mirrors :func:`subterranean.cloud.modal_app.run`'s
+    without spawning Modal. Mirrors :func:`agent2model.cloud.modal_app.run`'s
     parameters one-for-one, dasherising them for the ``modal run`` CLI.
 
     Args:
@@ -455,7 +453,7 @@ def _build_modal_run_argv(
         >>> _build_modal_run_argv(Path("/tmp/wf.yaml"), name=None, size="3b",
         ...     n=2000, epochs=20, eval_n=200, base_model=None,
         ...     skip_eval=False, serve_after=False)
-        ['modal', 'run', '-m', 'subterranean.cloud.modal_app::run', '--',
+        ['modal', 'run', '-m', 'agent2model.cloud.modal_app::run', '--',
          '--flowchart-path', '/tmp/wf.yaml', '--size', '3b',
          '--n', '2000', '--epochs', '20', '--eval-n', '200']
     """
@@ -543,9 +541,9 @@ def cloud_run(
 ) -> None:
     """Run the generic Modal pipeline on a user-supplied flowchart.
 
-    Builds and invokes ``modal run -m subterranean.cloud.modal_app::run -- ...``
+    Builds and invokes ``modal run -m agent2model.cloud.modal_app::run -- ...``
     in a subprocess, mapping the typed flags through. Modal must be installed
-    (``pip install subterranean-agents[cloud]``) and authenticated.
+    (``pip install agent2model[cloud]``) and authenticated.
 
     Args:
         flowchart_path: Path to a ``.yaml`` / ``.yml`` flowchart or LangGraph
@@ -592,7 +590,7 @@ def cloud_run(
     except FileNotFoundError as exc:
         logger.error(
             "Could not find the `modal` executable on PATH. Install the cloud "
-            "extra (`pip install subterranean-agents[cloud]`) and run `modal setup`."
+            "extra (`pip install agent2model[cloud]`) and run `modal setup`."
         )
         raise typer.Exit(code=1) from exc
     if result.returncode != 0:
@@ -611,11 +609,11 @@ def cloud_doctor() -> None:
     """
     from rich.console import Console
 
-    from subterranean.cloud.doctor import overall_exit_code, run_all_checks
+    from agent2model.cloud.doctor import overall_exit_code, run_all_checks
 
     console = Console()
     results = run_all_checks()
-    console.print("[bold]subterranean cloud doctor[/bold]")
+    console.print("[bold]agent2model cloud doctor[/bold]")
     for r in results:
         mark = "[green]+[/green]" if r.ok else "[red]x[/red]"
         sev = "" if r.severity == "critical" else " [dim](info)[/dim]"
@@ -657,10 +655,10 @@ def cloud_setup() -> None:
     """
     from rich.console import Console
 
-    from subterranean.cloud.setup import run_setup
+    from agent2model.cloud.setup import run_setup
 
     console = Console()
-    console.print("[bold]subterranean cloud setup[/bold]")
+    console.print("[bold]agent2model cloud setup[/bold]")
     io = _TyperWizardIO()
     results = run_setup(io)
     for r in results:
@@ -674,10 +672,10 @@ def cloud_setup() -> None:
         console.print(f"  {marker} {r.step}: {r.message}")
 
     console.print(
-        "\nSetup complete. Running `subterranean cloud doctor` to verify your environment.\n"
+        "\nSetup complete. Running `agent2model cloud doctor` to verify your environment.\n"
     )
     # Reuse the same doctor command so output stays in lock-step.
-    from subterranean.cloud.doctor import overall_exit_code, run_all_checks
+    from agent2model.cloud.doctor import overall_exit_code, run_all_checks
 
     doctor_results = run_all_checks()
     for check in doctor_results:
@@ -688,11 +686,11 @@ def cloud_setup() -> None:
             console.print(f"      [dim]fix:[/dim] {check.fix_command}")
 
     if overall_exit_code(doctor_results) == 0:
-        console.print("\n[green]Ready.[/green] Try: subterranean cloud run my_workflow.yaml")
+        console.print("\n[green]Ready.[/green] Try: agent2model cloud run my_workflow.yaml")
     else:
         console.print(
             "\n[yellow]Some checks still failing.[/yellow] Address them above and re-run "
-            "`subterranean cloud setup` or `subterranean cloud doctor`."
+            "`agent2model cloud setup` or `agent2model cloud doctor`."
         )
 
 

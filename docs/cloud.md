@@ -6,16 +6,16 @@ decoupled from the core library.
 
 !!! tip "First time on Modal?"
     Start with the [Cloud quickstart](cloud-quickstart.md). It walks you
-    through `subterranean cloud setup` (idempotent wizard) and `subterranean
+    through `agent2model cloud setup` (idempotent wizard) and `agent2model
     cloud doctor` (preflight checklist) and explains the cost-confirmation
     prompt every cloud entrypoint shows before any spend.
 
 ## Modal (primary)
 
 ```bash
-pip install "subterranean-agents[cloud]"
-subterranean cloud setup   # wizard: token + anthropic-secret
-subterranean cloud doctor  # green/red preflight checklist
+pip install "agent2model[cloud]"
+agent2model cloud setup   # wizard: token + anthropic-secret
+agent2model cloud doctor  # green/red preflight checklist
 ```
 
 Under the hood the wizard runs `modal token new` and creates the
@@ -33,23 +33,23 @@ Reproduce the paper's travel-booking experiment end to end — generate, train a
 Qwen 2.5 3B model, and evaluate — from a fresh laptop:
 
 ```bash
-modal run -m subterranean.cloud.modal_app::reproduce_travel
+modal run -m agent2model.cloud.modal_app::reproduce_travel
 ```
 
 The two 8B reproductions have their own entrypoints:
 
 ```bash
-modal run -m subterranean.cloud.modal_app::reproduce_zoom
-modal run -m subterranean.cloud.modal_app::reproduce_insurance
+modal run -m agent2model.cloud.modal_app::reproduce_zoom
+modal run -m agent2model.cloud.modal_app::reproduce_insurance
 ```
 
 Each runs the full pipeline and produces a compiled model whose eval scores are
-within 5% of the paper. See [`benchmarks/`](https://github.com/subterranean-agents/subterranean/tree/main/benchmarks)
+within 5% of the paper. See [`benchmarks/`](https://github.com/kamaalg/agent2model/tree/main/benchmarks)
 for the targets.
 
 ### Building blocks
 
-`subterranean/cloud/modal_app.py` defines reusable Modal functions you can
+`agent2model/cloud/modal_app.py` defines reusable Modal functions you can
 compose into your own pipeline:
 
 | Function | Hardware | Role |

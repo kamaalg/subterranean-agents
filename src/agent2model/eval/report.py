@@ -1,13 +1,13 @@
-"""Render an :class:`~subterranean.eval.runner.EvalRunResult` to PDF and JSON.
+"""Render an :class:`~agent2model.eval.runner.EvalRunResult` to PDF and JSON.
 
 The PDF is README-quality: per-criterion grouped bar charts with 95%-CI error
 bars (conditions side by side), a failure-rate chart, and a cost-per-conversation
 breakdown. matplotlib is imported **lazily** so the rest of the eval package (and
 the unit tests) work without the optional ``[report]`` extra installed; if it is
 missing, :func:`write_pdf_report` raises a clear, actionable
-:class:`~subterranean.exceptions.EvalError`.
+:class:`~agent2model.exceptions.EvalError`.
 
-The structured :class:`~subterranean.eval.runner.EvalRunResult` is also dumped as
+The structured :class:`~agent2model.eval.runner.EvalRunResult` is also dumped as
 JSON (:func:`write_json_report`) so the numbers are machine-readable and
 comparable to the paper's Table 1-3 targets.
 """
@@ -18,13 +18,13 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from subterranean.eval.rubric import RUBRIC, CriterionName
-from subterranean.exceptions import EvalError
+from agent2model.eval.rubric import RUBRIC, CriterionName
+from agent2model.exceptions import EvalError
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from subterranean.eval.runner import ConditionResult, EvalRunResult
+    from agent2model.eval.runner import ConditionResult, EvalRunResult
 
 __all__ = ["write_json_report", "write_pdf_report"]
 

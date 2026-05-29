@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 from scipy import stats
 
-from subterranean.eval.runner import (
+from agent2model.eval.runner import (
     bootstrap_ci,
     failure_rate,
     holm_bonferroni,

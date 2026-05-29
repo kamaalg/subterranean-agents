@@ -1,11 +1,11 @@
 # Training guide
 
-`subterranean train` runs full-parameter supervised fine-tuning on the synthetic
+`agent2model train` runs full-parameter supervised fine-tuning on the synthetic
 dataset, wrapping TRL's `SFTTrainer` with the paper's recipe. It is GPU-only;
 without a GPU, use the [Modal recipes](cloud.md).
 
 ```bash
-subterranean train build/travel --base Qwen/Qwen2.5-3B-Instruct --size 3b --epochs 20
+agent2model train build/travel --base Qwen/Qwen2.5-3B-Instruct --size 3b --epochs 20
 ```
 
 It reads `build/<name>/dataset.jsonl` and saves the best checkpoint (by held-out
@@ -46,8 +46,8 @@ The CLI covers the common path. For finer control, use `TrainingConfig` directly
 
 ```python
 from pathlib import Path
-from subterranean.training.config import TrainingConfig
-from subterranean.training.trainer import train
+from agent2model.training.config import TrainingConfig
+from agent2model.training.trainer import train
 
 config = TrainingConfig.for_3b("build/travel/model", epochs=20)
 best = train(config, Path("build/travel/dataset.jsonl"))
@@ -73,4 +73,4 @@ Per the paper, by procedure complexity:
 | Medium with domain knowledge (e.g. zoom) | ~6,000 |
 | Complex (≈55 nodes, e.g. insurance) | ~3,000 |
 
-Generate these with `subterranean generate` before training.
+Generate these with `agent2model generate` before training.

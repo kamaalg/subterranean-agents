@@ -3,18 +3,18 @@
 Lives in its own module because :func:`modal.parameter` requires Modal to
 introspect real type objects on the class annotations, which means this file
 **cannot** carry ``from __future__ import annotations``. The rest of
-:mod:`subterranean.cloud.modal_app` does carry it (for the worker-function
+:mod:`agent2model.cloud.modal_app` does carry it (for the worker-function
 signatures), so we isolate the class here and re-export it.
 
 Modal also requires :func:`modal.App.cls`-decorated classes to be defined at
 module top level (they cannot be created inside a factory function), which is
 why :data:`ServeCls` is constructed declaratively here using shared images and
-volumes imported from :mod:`subterranean.cloud.modal_app`.
+volumes imported from :mod:`agent2model.cloud.modal_app`.
 """
 
 import modal
 
-from subterranean.cloud.modal_app_constants import (
+from agent2model.cloud.modal_app_constants import (
     MODEL_ROOT,
     SERVE_APP,
     SERVE_GPU,
@@ -44,7 +44,7 @@ class ServeCls:
     Modal's ``@modal.web_server`` requires a nullary method, so the recipe name
     and optional checkpoint override are passed via :func:`modal.parameter`
     rather than method arguments. Callers usually go through
-    :data:`subterranean.cloud.modal_app.serve` which presents a natural
+    :data:`agent2model.cloud.modal_app.serve` which presents a natural
     ``serve.remote(recipe, model_path=None)`` API.
     """
 
@@ -54,7 +54,7 @@ class ServeCls:
     @modal.web_server(port=SERVE_PORT, startup_timeout=600)  # type: ignore[untyped-decorator]
     def run(self) -> None:
         """Launch the OpenAI-compatible vLLM server inside the container."""
-        from subterranean.serve import vllm_server
+        from agent2model.serve import vllm_server
 
         base = self.model_path or f"{MODEL_ROOT}/{self.recipe_name}"
         resolved = vllm_server.resolve_model_path(base)

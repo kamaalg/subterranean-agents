@@ -2,7 +2,7 @@
 
 Structural parsing is handled by the schema/loader; this module enforces the
 *graph* invariants from the IR spec and provides reachability/path helpers reused
-by data generation (:mod:`subterranean.generation.traversal`).
+by data generation (:mod:`agent2model.generation.traversal`).
 
 Invariants enforced by :func:`validate`:
 
@@ -19,8 +19,8 @@ from __future__ import annotations
 from collections import deque
 from collections.abc import Iterator
 
-from subterranean.exceptions import FlowchartValidationError
-from subterranean.ir.schema import Flowchart
+from agent2model.exceptions import FlowchartValidationError
+from agent2model.ir.schema import Flowchart
 
 
 def validate(flowchart: Flowchart) -> None:

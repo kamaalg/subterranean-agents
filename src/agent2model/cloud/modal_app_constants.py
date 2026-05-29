@@ -13,22 +13,22 @@ from pathlib import Path
 
 import modal
 
-APP_NAME = "subterranean"
+APP_NAME = "agent2model"
 SERVE_APP = modal.App(APP_NAME)
 
 # ----------------------------------------------------------------------------
 # Images
 #
-# Until ``subterranean-agents`` is published to PyPI, ship the local source tree
+# Until ``agent2model`` is published to PyPI, ship the local source tree
 # into the image and pip-install it editable with the relevant extras. This is
 # the standard Modal dev pattern (see ``Image.add_local_dir``) and lets the same
 # Modal apps run unchanged once the package is published — just swap each image
-# to ``pip_install("subterranean-agents[<extra>]")``.
+# to ``pip_install("agent2model[<extra>]")``.
 # ----------------------------------------------------------------------------
 
-#: Repo root, derived from this file's location (``src/subterranean/cloud/...``).
+#: Repo root, derived from this file's location (``src/agent2model/cloud/...``).
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-_REMOTE_SRC = "/root/subterranean"
+_REMOTE_SRC = "/root/agent2model"
 _IGNORE = [
     "**/.git",
     "**/.venv",
@@ -85,9 +85,9 @@ TRAIN_IMAGE = _local_install_image("train", gpu=True)
 SERVE_IMAGE = _local_install_image("serve", gpu=True)
 
 #: Persisted build artifacts (flowchart IR, dataset.jsonl, eval reports).
-BUILD_VOLUME = modal.Volume.from_name("subterranean-build", create_if_missing=True)
+BUILD_VOLUME = modal.Volume.from_name("agent2model-build", create_if_missing=True)
 #: Persisted fine-tuned model weights.
-MODEL_VOLUME = modal.Volume.from_name("subterranean-models", create_if_missing=True)
+MODEL_VOLUME = modal.Volume.from_name("agent2model-models", create_if_missing=True)
 
 BUILD_ROOT = "/build"
 MODEL_ROOT = "/models"

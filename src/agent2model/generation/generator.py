@@ -3,8 +3,8 @@
 This is the core of Phase 2. For each conversation we:
 
 1. Sample a ``start``-to-terminal path through the flowchart
-   (:mod:`subterranean.generation.traversal`).
-2. Sample scenario variables (:mod:`subterranean.generation.scenarios`).
+   (:mod:`agent2model.generation.traversal`).
+2. Sample scenario variables (:mod:`agent2model.generation.scenarios`).
 3. Walk the path turn by turn. At each ``agent`` or ``user`` node we format that
    node's prompt with the scenario and the running history and call the Anthropic
    API for the turn's content. (``decision`` nodes carry no prompt — the path was
@@ -17,7 +17,7 @@ which is identical across the whole run and therefore prompt-cached for a large
 cost saving.
 
 The generator is budgeted (a USD hard-stop raising
-:class:`~subterranean.exceptions.GenerationBudgetExceeded`), resumable (a
+:class:`~agent2model.exceptions.GenerationBudgetExceeded`), resumable (a
 checkpoint of completed conversations on disk), concurrent (an
 ``asyncio.Semaphore``), and never blocks the API without a Rich progress bar.
 Token usage and cost are written to ``build/<name>/cost.json``.
@@ -42,12 +42,12 @@ from rich.progress import (
     TimeElapsedColumn,
 )
 
-from subterranean.exceptions import GenerationBudgetExceeded
-from subterranean.generation.formatter import Conversation, Turn
-from subterranean.generation.scenarios import Scenario, sample_scenario
-from subterranean.generation.traversal import TraversalConfig, sample_path
-from subterranean.ir.schema import Flowchart, Node
-from subterranean.logging import logger
+from agent2model.exceptions import GenerationBudgetExceeded
+from agent2model.generation.formatter import Conversation, Turn
+from agent2model.generation.scenarios import Scenario, sample_scenario
+from agent2model.generation.traversal import TraversalConfig, sample_path
+from agent2model.ir.schema import Flowchart, Node
+from agent2model.logging import logger
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -78,7 +78,7 @@ class GenerationConfig(BaseModel):
         model: Anthropic model id. Defaults to :data:`DEFAULT_MODEL`.
         budget_usd: Hard spending cap in USD. When the accumulated cost would
             exceed this, generation stops and
-            :class:`~subterranean.exceptions.GenerationBudgetExceeded` is raised.
+            :class:`~agent2model.exceptions.GenerationBudgetExceeded` is raised.
         seed: Base RNG seed; conversation ``i`` derives a deterministic per-item
             seed from it, so a whole run is reproducible.
         max_concurrent: Maximum in-flight API calls (an ``asyncio.Semaphore``).

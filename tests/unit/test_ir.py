@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from subterranean.exceptions import FlowchartValidationError
-from subterranean.ir.loader import load_flowchart, load_flowchart_from_string
-from subterranean.ir.schema import Edge, Flowchart, Node
-from subterranean.ir.validator import enumerate_paths, validate
+from agent2model.exceptions import FlowchartValidationError
+from agent2model.ir.loader import load_flowchart, load_flowchart_from_string
+from agent2model.ir.schema import Edge, Flowchart, Node
+from agent2model.ir.validator import enumerate_paths, validate
 
 # A minimal valid flowchart used by several tests.
 MINIMAL = """

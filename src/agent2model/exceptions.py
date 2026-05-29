@@ -1,4 +1,4 @@
-"""Typed exceptions for the subterranean library.
+"""Typed exceptions for the agent2model library.
 
 Errors are raised as exceptions, never returned as values. Each public failure
 mode has a dedicated type so callers (and the CLI) can present actionable messages.
@@ -7,11 +7,11 @@ mode has a dedicated type so callers (and the CLI) can present actionable messag
 from __future__ import annotations
 
 
-class SubterraneanError(Exception):
-    """Base class for all subterranean errors."""
+class agent2modelError(Exception):
+    """Base class for all agent2model errors."""
 
 
-class FlowchartValidationError(SubterraneanError):
+class FlowchartValidationError(agent2modelError):
     """Raised when a flowchart violates an IR invariant.
 
     The message is intended to be shown directly to a user, so it should name the
@@ -23,7 +23,7 @@ class FlowchartValidationError(SubterraneanError):
         super().__init__(message)
 
 
-class GenerationBudgetExceeded(SubterraneanError):
+class GenerationBudgetExceeded(agent2modelError):
     """Raised when synthetic data generation would exceed the user's ``--budget``.
 
     Attributes:
@@ -39,11 +39,11 @@ class GenerationBudgetExceeded(SubterraneanError):
         )
 
 
-class TrainingDivergedError(SubterraneanError):
+class TrainingDivergedError(agent2modelError):
     """Raised when fine-tuning diverges (NaN/Inf loss or runaway gradient)."""
 
 
-class ServingError(SubterraneanError):
+class ServingError(agent2modelError):
     """Raised when a compiled model cannot be served.
 
     Covers both "nothing servable was found in the build directory" and "the
@@ -53,7 +53,7 @@ class ServingError(SubterraneanError):
     """
 
 
-class EvalBudgetExceeded(SubterraneanError):
+class EvalBudgetExceeded(agent2modelError):
     """Raised when an evaluation run would exceed the user's ``--budget``.
 
     The eval harness makes many LLM calls (the user simulator, the
@@ -73,7 +73,7 @@ class EvalBudgetExceeded(SubterraneanError):
         )
 
 
-class EvalError(SubterraneanError):
+class EvalError(agent2modelError):
     """Raised for non-budget evaluation failures.
 
     Covers an unknown baseline name, a missing optional dependency needed to

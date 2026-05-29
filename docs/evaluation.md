@@ -1,12 +1,12 @@
 # Evaluation guide
 
 Evaluation is the library's differentiator: it ships the paper's methodology end
-to end. `subterranean eval` runs your compiled model and a set of baselines
+to end. `agent2model eval` runs your compiled model and a set of baselines
 against a flowchart-blind user simulator, judges every conversation on a
 5-criterion rubric, and writes a README-quality report.
 
 ```bash
-subterranean eval build/travel --baselines in_context,langgraph --n 200
+agent2model eval build/travel --baselines in_context,langgraph --n 200
 ```
 
 Outputs `build/travel/eval_report.json` and `eval_report.pdf`. The command prints
@@ -74,6 +74,6 @@ written. Stats use SciPy.
 ## Regression gate
 
 Reproduction targets and the >5% release gate live in
-[`benchmarks/`](https://github.com/subterranean-agents/subterranean/tree/main/benchmarks);
+[`benchmarks/`](https://github.com/kamaalg/agent2model/tree/main/benchmarks);
 `tests/e2e/` reads `benchmarks/targets.json` and fails the build if a measured
 criterion drops more than 5% below the paper number.

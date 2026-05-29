@@ -2,7 +2,7 @@
 
 RunPod is the **secondary** cloud target — [Modal](../README.md) is the primary,
 one-command path. RunPod is more manual: you launch a pod from a JSON spec, the
-pod runs `setup.sh`, which installs `subterranean-agents` and invokes the right
+pod runs `setup.sh`, which installs `agent2model` and invokes the right
 CLI command. Build artifacts live on the pod's persistent volume mounted at
 `/workspace`.
 
@@ -16,7 +16,7 @@ CLI command. Build artifacts live on the pod's persistent volume mounted at
 | `setup.sh` | Installs the package and runs a stage: `generate`, `train`, `evaluate`, `serve`. |
 
 Each spec sets a `dockerArgs` that runs `bash setup.sh <stage>` from `/workspace`,
-and an `env` block of `SUBTERRANEAN_*` variables the script reads (see the header
+and an `env` block of `AGENT2MODEL_*` variables the script reads (see the header
 comment in `setup.sh` for the full list).
 
 ## Flow
@@ -26,12 +26,12 @@ The pipeline mirrors the four CLI commands; only generation/eval need an
 
 1. **Prepare the build dir.** Compile your flowchart locally and upload the
    `build/<example>/` directory (with `flowchart.json`) to the pod volume at
-   `/workspace/build/<example>/`. (`subterranean compile <yaml> --out build/<example>`.)
+   `/workspace/build/<example>/`. (`agent2model compile <yaml> --out build/<example>`.)
 
 2. **Generate data** (CPU/API-bound — can run on a cheap pod or locally):
 
    ```bash
-   SUBTERRANEAN_EXAMPLE=travel ANTHROPIC_API_KEY=sk-ant-... bash setup.sh generate
+   AGENT2MODEL_EXAMPLE=travel ANTHROPIC_API_KEY=sk-ant-... bash setup.sh generate
    ```
 
 3. **Train.** Create the pod from the spec (RunPod CLI or console). For the 3B path:
@@ -42,18 +42,18 @@ The pipeline mirrors the four CLI commands; only generation/eval need an
 
    In practice: import the JSON in the RunPod console "Deploy" form, or pass the
    fields to `runpodctl`/the GraphQL API. The pod runs
-   `bash setup.sh train`, which calls `subterranean train` with the spec's
-   `SUBTERRANEAN_BASE_MODEL` / `SUBTERRANEAN_EPOCHS`. The best checkpoint lands at
+   `bash setup.sh train`, which calls `agent2model train` with the spec's
+   `AGENT2MODEL_BASE_MODEL` / `AGENT2MODEL_EPOCHS`. The best checkpoint lands at
    `/workspace/build/<example>/model/best`.
 
    - `train_3b.json`: 1 GPU (A40/A10G class), 20 epochs.
    - `train_8b.json`: 8x A100 80GB, ZeRO-3, 10 epochs (the trainer's 8B preset
-     wires in `subterranean/training/deepspeed/zero3.json`).
+     wires in `agent2model/training/deepspeed/zero3.json`).
 
 4. **Evaluate** (CPU/API-bound):
 
    ```bash
-   SUBTERRANEAN_EXAMPLE=travel ANTHROPIC_API_KEY=sk-ant-... bash setup.sh evaluate
+   AGENT2MODEL_EXAMPLE=travel ANTHROPIC_API_KEY=sk-ant-... bash setup.sh evaluate
    ```
 
    Writes `eval_report.json` / `eval_report.pdf` into the build dir.

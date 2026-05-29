@@ -33,7 +33,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from subterranean.training.config import (
+from agent2model.training.config import (
     DEFAULT_3B_MODEL,
     DEFAULT_8B_MODEL,
     ModelSize,
@@ -143,7 +143,7 @@ EXAMPLE_FLOWCHART_DIRS: dict[str, str] = {
 }
 
 # Resolve the repo's examples directory relative to this file. The package
-# layout is ``<repo>/src/subterranean/cloud/_recipes.py``, with examples at
+# layout is ``<repo>/src/agent2model/cloud/_recipes.py``, with examples at
 # ``<repo>/examples/<dir>/flowchart.yaml``. When the package is installed (e.g.
 # into a Modal image) the ``examples`` directory is not shipped — we therefore
 # read the YAML eagerly here, so the bytes travel with the recipe.
@@ -157,7 +157,7 @@ def _load_example_flowchart_yaml(example: str) -> str:
     Falls back to a tiny placeholder if the ``examples/`` directory is not on
     disk (e.g. when the package is installed from a wheel that does not ship the
     examples). The :data:`EXAMPLES` recipes are still constructed; importing
-    ``subterranean.cloud._recipes`` never fails just because the YAML is absent.
+    ``agent2model.cloud._recipes`` never fails just because the YAML is absent.
 
     Args:
         example: Recipe id (key of :data:`EXAMPLE_FLOWCHART_DIRS`).

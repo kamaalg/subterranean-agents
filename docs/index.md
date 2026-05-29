@@ -1,11 +1,17 @@
-# subterranean
+# agent2model
 
-> Compile agentic workflows into LLM weights.
+> Turn your LangGraph/CrewAI agent into a small open model that runs with **no orchestrator** — near-frontier quality at a fraction of the inference cost.
 
-`subterranean` (PyPI: [`subterranean-agents`](https://pypi.org/project/subterranean-agents/))
-takes a procedural agent workflow and *compiles* it into a small model's weights
-via synthetic-data fine-tuning, so the model **self-orchestrates** at runtime
-instead of relying on an external orchestrator (LangGraph, CrewAI, …).
+`agent2model` (PyPI: [`agent2model`](https://pypi.org/project/agent2model/))
+takes a procedural agent workflow — written as YAML or imported straight from a
+LangGraph `StateGraph` — and bakes the whole procedure into a small model's
+**weights** via synthetic-data fine-tuning. The result **self-orchestrates** at
+runtime: there is no external orchestrator and no per-turn frontier call.
+
+Unlike prompt-optimizers (DSPy, GEPA) that keep a runtime program, and unlike
+agent frameworks (LangGraph, CrewAI) that run the procedure live every turn,
+`agent2model` removes the orchestrator entirely — the procedure lives in the
+weights.
 
 Based on Dennis et al. 2026, *Compiling Agentic Workflows into LLM Weights*
 (arXiv:2605.22502): near-frontier quality at **128–462× lower inference cost**.
@@ -13,7 +19,7 @@ Based on Dennis et al. 2026, *Compiling Agentic Workflows into LLM Weights*
 ## The idea
 
 Most agent frameworks inject the procedure into a frontier model's prompt on
-every turn. That is expensive and slow. Instead, `subterranean`:
+every turn. That is expensive and slow. Instead, `agent2model`:
 
 1. takes your procedure as a **Flowchart IR** (YAML, or imported from LangGraph);
 2. **generates** synthetic conversations that walk the procedure, via Claude;
@@ -28,11 +34,11 @@ run the procedure from natural dialogue alone.
 ## The four-command journey
 
 ```bash
-subterranean compile examples/travel_booking/flowchart.yaml --out build/travel
-subterranean generate build/travel --n 2000 --model claude-sonnet-4-5
-subterranean train    build/travel --base Qwen/Qwen2.5-3B-Instruct --size 3b --epochs 20
-subterranean eval     build/travel --baselines in_context,langgraph --n 200
-# or: subterranean serve build/travel --port 8000
+agent2model compile examples/travel_booking/flowchart.yaml --out build/travel
+agent2model generate build/travel --n 2000 --model claude-sonnet-4-5
+agent2model train    build/travel --base Qwen/Qwen2.5-3B-Instruct --size 3b --epochs 20
+agent2model eval     build/travel --baselines in_context,langgraph --n 200
+# or: agent2model serve build/travel --port 8000
 ```
 
 See the [Quickstart](quickstart.md) to run it end to end (including with no local

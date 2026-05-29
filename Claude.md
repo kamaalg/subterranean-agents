@@ -1,4 +1,4 @@
-# CLAUDE.md — Subterranean Agents
+# CLAUDE.md — agent2model
 
 ## Project
 
@@ -13,7 +13,7 @@ model's weights. The model learns to self-orchestrate. Result in the paper:
 
 This library makes that pipeline reproducible and usable on any procedural workflow.
 
-**Package name:** `subterranean` (PyPI: `subterranean-agents`)
+**Package name:** `agent2model` (PyPI: `agent2model`)
 **License:** Apache 2.0
 **Target audience:** ML engineers building production agents on stable workflows.
 
@@ -37,8 +37,8 @@ RLHF/DPO, online learning, multi-turn tool use. These are v2+.
 ## Repository layout
 
 ```
-subterranean/
-├── src/subterranean/
+agent2model/
+├── src/agent2model/
 │   ├── ir/                 # Flowchart IR — the canonical procedure representation
 │   │   ├── schema.py       # Pydantic models: Flowchart, Node, Edge
 │   │   ├── loader.py       # YAML → IR
@@ -64,7 +64,7 @@ subterranean/
 │   │   └── runner.py       # run n=200 scenarios across conditions
 │   ├── serve/
 │   │   └── vllm_server.py  # OpenAI-compatible server wrapping a compiled model
-│   ├── cli.py              # Typer CLI: `subterranean compile`, `eval`, `serve`
+│   ├── cli.py              # Typer CLI: `agent2model compile`, `eval`, `serve`
 │   └── cloud/
 │       ├── modal_app.py    # Modal pipeline definition
 │       └── runpod/         # RunPod templates + setup scripts
@@ -85,17 +85,17 @@ There are exactly four commands a user runs. The CLI must make all four feel obv
 
 ```bash
 # 1. Convert a workflow (YAML or LangGraph) into the IR and validate it.
-subterranean compile examples/travel/flowchart.yaml --out build/travel
+agent2model compile examples/travel/flowchart.yaml --out build/travel
 
 # 2. Generate synthetic training data.
-subterranean generate build/travel --n 2000 --model claude-sonnet-4-5
+agent2model generate build/travel --n 2000 --model claude-sonnet-4-5
 
 # 3. Fine-tune a base model on the generated data.
-subterranean train build/travel --base Qwen/Qwen3-8B --epochs 10
+agent2model train build/travel --base Qwen/Qwen3-8B --epochs 10
 
 # 4. Evaluate or serve the compiled model.
-subterranean eval build/travel --baselines in_context,langgraph --n 200
-subterranean serve build/travel --port 8000
+agent2model eval build/travel --baselines in_context,langgraph --n 200
+agent2model serve build/travel --port 8000
 ```
 
 When this works smoothly from a fresh clone on Modal, v1 is done.
@@ -264,7 +264,7 @@ Use SciPy for stats. Don't roll your own.
 
 Users have no GPU. Modal is the primary recipe, RunPod is secondary.
 
-`subterranean/cloud/modal_app.py` should define:
+`agent2model/cloud/modal_app.py` should define:
 - `generate_data` function: runs the synth pipeline on Modal CPUs (it's API-bound, no GPU needed)
 - `train_3b` function: runs on a single A10G or A100
 - `train_8b` function: runs on 8× A100 with DeepSpeed ZeRO-3
@@ -274,7 +274,7 @@ Users have no GPU. Modal is the primary recipe, RunPod is secondary.
 A user should be able to run the entire travel-booking reproduction from a fresh laptop
 with:
 ```bash
-modal run -m subterranean.cloud.modal_app::reproduce_travel
+modal run -m agent2model.cloud.modal_app::reproduce_travel
 ```
 This is the single most important demo. Optimize for it.
 
@@ -293,7 +293,7 @@ polished than Modal but documented.
 - **No global state.** Pass config explicitly. The only acceptable "global" is the logger.
 - **Errors are exceptions, not return values.** Use typed exceptions:
   `FlowchartValidationError`, `GenerationBudgetExceeded`, `TrainingDivergedError`.
-- **Imports:** stdlib, then third-party, then `subterranean.*`. Absolute imports only.
+- **Imports:** stdlib, then third-party, then `agent2model.*`. Absolute imports only.
 - **Black + Ruff + Mypy strict.** CI fails on any of them.
 - **Docstrings:** Google style. Every public function has one. Examples in the docstring
   for anything a user would call.
@@ -310,7 +310,7 @@ polished than Modal but documented.
   3. **End-to-end** (`tests/e2e/`) — full pipeline on the travel-booking example.
      Tagged `@pytest.mark.e2e`, runs on release candidates. Compares accuracy against
      paper's published numbers; CI fails if we regress > 5%.
-- **Coverage target:** 85% for `src/subterranean/ir`, `generation`, `eval`. The training
+- **Coverage target:** 85% for `src/agent2model/ir`, `generation`, `eval`. The training
   module is hard to unit-test; aim for 60% there and lean on e2e.
 - **Fixtures** in `tests/conftest.py`. The travel flowchart YAML is a shared fixture.
 - **Snapshot testing** with `syrupy` for generated conversations and eval reports.
@@ -333,16 +333,16 @@ polished than Modal but documented.
 
 The library is v1-ready when all of the following are true:
 
-1. `pip install subterranean-agents && modal run -m subterranean.cloud.modal_app::reproduce_travel`
+1. `pip install agent2model && modal run -m agent2model.cloud.modal_app::reproduce_travel`
    produces a compiled 3B model with eval scores within 5% of the paper's Table 1.
 2. The same works for `reproduce_zoom` and `reproduce_insurance` on 8B.
 3. A user with a LangGraph `StateGraph` can run
-   `subterranean compile path/to/graph.py --out build/mine` and proceed through the
+   `agent2model compile path/to/graph.py --out build/mine` and proceed through the
    pipeline without writing YAML by hand.
 4. The eval harness produces a report PDF with per-criterion bar charts, baseline
    comparisons, failure rates, cost breakdowns. Looks like something you'd put in a
    GitHub README.
-5. `subterranean serve` exposes an OpenAI-compatible chat endpoint backed by vLLM.
+5. `agent2model serve` exposes an OpenAI-compatible chat endpoint backed by vLLM.
 6. The docs site has: quickstart, IR spec reference, training guide, eval guide,
    cloud deployment guide, troubleshooting, FAQ.
 7. CI is green: ruff, mypy strict, pytest unit + integration on the latest tag.
@@ -361,7 +361,7 @@ The library is v1-ready when all of the following are true:
 - **Don't make users write Python to use the library.** The CLI + YAML is the contract.
   Python API is for power users.
 - **Don't depend on a specific cloud provider in the core.** The `cloud/` module is
-  separate from `src/subterranean/` for a reason.
+  separate from `src/agent2model/` for a reason.
 - **Don't hide API costs.** Every command that calls an LLM prints expected cost before
   starting and actual cost after.
 

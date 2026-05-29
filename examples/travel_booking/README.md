@@ -5,7 +5,7 @@ gather preferences, present options, refine on feedback, book, and confirm — w
 escape paths to escalation and abandonment.
 
 This is the paper's **simple** procedure and the headline reproduction:
-`modal run -m subterranean.cloud.modal_app::reproduce_travel` trains a Qwen 2.5
+`modal run -m agent2model.cloud.modal_app::reproduce_travel` trains a Qwen 2.5
 3B model that scores within 5% of the paper's Table 1.
 
 ## What it does
@@ -30,28 +30,28 @@ The four commands (paper setup: Qwen 2.5 3B Instruct, ~2,125 conversations,
 
 ```bash
 # 1. Compile + validate the flowchart into the IR.
-subterranean compile examples/travel_booking/flowchart.yaml --out build/travel
+agent2model compile examples/travel_booking/flowchart.yaml --out build/travel
 
 # 2. Generate synthetic training data (resumable, budgeted, prompt-cached).
-subterranean generate build/travel --n 2000 --model claude-sonnet-4-5 --budget 60
+agent2model generate build/travel --n 2000 --model claude-sonnet-4-5 --budget 60
 
 # 3. Full fine-tune a 3B base model on the generated data.
-subterranean train build/travel --base Qwen/Qwen2.5-3B-Instruct --size 3b --epochs 20
+agent2model train build/travel --base Qwen/Qwen2.5-3B-Instruct --size 3b --epochs 20
 
 # 4. Evaluate against baselines (or serve).
-subterranean eval build/travel --baselines in_context,langgraph --n 200
-subterranean serve build/travel --port 8000
+agent2model eval build/travel --baselines in_context,langgraph --n 200
+agent2model serve build/travel --port 8000
 ```
 
 No local GPU? Run the whole thing on Modal:
 
 ```bash
-modal run -m subterranean.cloud.modal_app::reproduce_travel
+modal run -m agent2model.cloud.modal_app::reproduce_travel
 ```
 
 ## Expected results
 
-Per-criterion means (1–5), `n=200`, Subterranean (compiled 3B) vs. the paper's
+Per-criterion means (1–5), `n=200`, agent2model (compiled 3B) vs. the paper's
 Table 1. Fill in **Your run** from `build/travel/eval_report.json` /
 `eval_report.pdf`. The release gate fails if any criterion drops >5% below the
 paper number (see [`benchmarks/`](../../benchmarks/README.md)).

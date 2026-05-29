@@ -1,9 +1,9 @@
-"""Pure preflight checks for the cloud-UX layer (``subterranean cloud doctor``).
+"""Pure preflight checks for the cloud-UX layer (``agent2model cloud doctor``).
 
 This module is deliberately split from the Typer command so each check can be
 unit-tested in isolation with monkeypatched dependencies. Every check returns a
 :class:`CheckResult` carrying its name, a green/red outcome, a one-line message,
-and an actionable fix command. The CLI in :mod:`subterranean.cli` just calls
+and an actionable fix command. The CLI in :mod:`agent2model.cli` just calls
 these and renders the result with Rich.
 
 The five checks, in order:
@@ -62,7 +62,7 @@ CheckSeverity = Literal["critical", "informational"]
 MODAL_TOKEN_PATH = Path.home() / ".modal.toml"
 
 #: The Modal Secret name we expect to find in the user's workspace. The Modal
-#: workers in :mod:`subterranean.cloud.modal_app` look this up under the same
+#: workers in :mod:`agent2model.cloud.modal_app` look this up under the same
 #: name; if it is missing the API-bound steps fail at runtime.
 ANTHROPIC_SECRET_NAME = "anthropic-secret"
 
@@ -124,7 +124,7 @@ def check_modal_installed() -> CheckResult:
             ok=False,
             severity="critical",
             message="`import modal` failed.",
-            fix_command='pip install "subterranean-agents[cloud]"',
+            fix_command='pip install "agent2model[cloud]"',
         )
     try:
         version = getattr(__import__("modal"), "__version__", "unknown")
@@ -250,7 +250,7 @@ def check_anthropic_secret(secret_name: str = ANTHROPIC_SECRET_NAME) -> CheckRes
             ok=False,
             severity="critical",
             message="modal not installed; cannot look up secrets.",
-            fix_command='pip install "subterranean-agents[cloud]"',
+            fix_command='pip install "agent2model[cloud]"',
         )
     try:
         handle = modal.Secret.from_name(secret_name)
@@ -262,7 +262,7 @@ def check_anthropic_secret(secret_name: str = ANTHROPIC_SECRET_NAME) -> CheckRes
             severity="critical",
             message=f"could not resolve secret: {exc}",
             fix_command=(
-                "subterranean cloud setup  "
+                "agent2model cloud setup  "
                 "# or: modal secret create anthropic-secret ANTHROPIC_API_KEY=sk-ant-..."
             ),
         )

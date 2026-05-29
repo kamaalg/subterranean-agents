@@ -1,8 +1,8 @@
-"""Idempotent first-time wizard for the cloud-UX layer (``subterranean cloud setup``).
+"""Idempotent first-time wizard for the cloud-UX layer (``agent2model cloud setup``).
 
 Splits the *flow logic* from the I/O so the same plan can be unit-tested with
 stubbed prompts/subprocess/webbrowser/Modal Secret APIs. The wizard's three
-steps mirror :mod:`subterranean.cloud.doctor`:
+steps mirror :mod:`agent2model.cloud.doctor`:
 
 1. **Modal account** — ask whether the user already has one; if not, open
    ``https://modal.com/signup`` and bail with a "come back" instruction.
@@ -25,7 +25,7 @@ import webbrowser
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
-from subterranean.cloud.doctor import (
+from agent2model.cloud.doctor import (
     ANTHROPIC_SECRET_NAME,
     MODAL_TOKEN_PATH,
     check_anthropic_key,
@@ -78,7 +78,7 @@ class WizardResult:
 class WizardIO(Protocol):
     """The three I/O verbs the wizard needs.
 
-    Implementations live in :mod:`subterranean.cli` (typer-backed) and in the
+    Implementations live in :mod:`agent2model.cli` (typer-backed) and in the
     unit tests (canned responses). Keeping the wizard parameterised on this
     protocol means flow tests do not have to monkeypatch Typer or stdin.
     """
@@ -126,9 +126,7 @@ def step_modal_account(
     if open_browser:
         opener = browser_open if callable(browser_open) else webbrowser.open
         opener(MODAL_SIGNUP_URL)
-    io.echo(
-        f"Sign up at {MODAL_SIGNUP_URL}, then re-run " "`subterranean cloud setup` to continue."
-    )
+    io.echo(f"Sign up at {MODAL_SIGNUP_URL}, then re-run " "`agent2model cloud setup` to continue.")
     return WizardResult(
         step="modal_account",
         outcome="user_declined",
@@ -174,7 +172,7 @@ def step_modal_token(
             outcome="failed",
             message=(
                 f"Could not find `{modal_bin}` on PATH. "
-                'Install with `pip install "subterranean-agents[cloud]"`.'
+                'Install with `pip install "agent2model[cloud]"`.'
             ),
         )
     final = check_modal_token()

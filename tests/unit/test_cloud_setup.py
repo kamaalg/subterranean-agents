@@ -1,4 +1,4 @@
-"""Unit tests for :mod:`subterranean.cloud.setup`.
+"""Unit tests for :mod:`agent2model.cloud.setup`.
 
 Each step is exercised through the pure :class:`WizardIO` protocol with canned
 responses, plus mocks for the Modal/subprocess/webbrowser side effects. The
@@ -15,9 +15,9 @@ from typing import Any
 
 import pytest
 
-from subterranean.cloud import setup as setup_mod
-from subterranean.cloud.doctor import CheckResult
-from subterranean.cloud.setup import (
+from agent2model.cloud import setup as setup_mod
+from agent2model.cloud.doctor import CheckResult
+from agent2model.cloud.setup import (
     WizardResult,
     create_anthropic_secret,
     run_setup,

@@ -12,14 +12,14 @@ from typing import TypedDict
 import pytest
 from langgraph.graph import END, START, StateGraph
 
-from subterranean.adapters.crewai import flowchart_from_crew
-from subterranean.adapters.langgraph import (
+from agent2model.adapters.crewai import flowchart_from_crew
+from agent2model.adapters.langgraph import (
     TODO_PROMPT,
     flowchart_from_stategraph,
     load_stategraph_from_pyfile,
 )
-from subterranean.exceptions import FlowchartValidationError
-from subterranean.ir.validator import validate
+from agent2model.exceptions import FlowchartValidationError
+from agent2model.ir.validator import validate
 
 
 class _State(TypedDict):

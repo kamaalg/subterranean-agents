@@ -1,6 +1,6 @@
 """Dynamic user simulator for evaluation (Claude Sonnet 4.5).
 
-During eval each :mod:`condition <subterranean.eval.baselines>` is driven by a
+During eval each :mod:`condition <agent2model.eval.baselines>` is driven by a
 *simulated user* that role-plays a customer given the sampled scenario variables
 and a personality. The simulator is a separate :class:`~anthropic.AsyncAnthropic`
 call that holds the conversation from the customer's side.
@@ -11,7 +11,7 @@ branches, or any internal script. This is the only way the eval generalises:
 the model-under-test must self-orchestrate against a user who behaves like a real
 person, not a scripted walk. The no-flowchart system prompt is built the same way
 as generation's ``_user_simulator_system`` (see
-:mod:`subterranean.generation.generator`).
+:mod:`agent2model.generation.generator`).
 """
 
 from __future__ import annotations
@@ -21,15 +21,15 @@ from typing import TYPE_CHECKING, Any
 from anthropic import AsyncAnthropic
 from anthropic.types import MessageParam, TextBlock
 
-from subterranean.generation.generator import DEFAULT_MODEL, CostTracker
-from subterranean.generation.scenarios import Scenario
+from agent2model.generation.generator import DEFAULT_MODEL, CostTracker
+from agent2model.generation.scenarios import Scenario
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from anthropic.types import Message
 
-    from subterranean.generation.formatter import Turn
+    from agent2model.generation.formatter import Turn
 
 __all__ = ["UserSimulator", "simulator_system_prompt"]
 

@@ -12,8 +12,8 @@ from pathlib import Path
 
 import pytest
 
-from subterranean.exceptions import ServingError
-from subterranean.serve import vllm_server
+from agent2model.exceptions import ServingError
+from agent2model.serve import vllm_server
 
 
 def _make_model_dir(path: Path) -> Path:
@@ -81,7 +81,7 @@ def test_build_args_accepts_path_object(tmp_path: Path) -> None:
 
 
 def test_resolve_prefers_model_best_from_training(tmp_path: Path) -> None:
-    # `subterranean train` writes <build>/model/best — the canonical layout.
+    # `agent2model train` writes <build>/model/best — the canonical layout.
     best = _make_model_dir(tmp_path / "model" / "best")
     assert vllm_server.resolve_model_path(tmp_path) == best
 

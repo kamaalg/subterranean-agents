@@ -98,7 +98,7 @@ class TrainingConfig(BaseModel):
         """Refuse LoRA at config-construction time."""
         if self.use_lora:
             raise ValueError(
-                "LoRA is not supported in subterranean v1: it fails to internalise "
+                "LoRA is not supported in agent2model v1: it fails to internalise "
                 f"procedural workflows. See {DENNIS_2026B}. Use full fine-tuning instead."
             )
         return self

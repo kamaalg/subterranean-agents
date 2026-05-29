@@ -1,5 +1,5 @@
 {
-  "name": "subterranean-serve",
+  "name": "agent2model-serve",
   "description": "Serve a compiled model behind an OpenAI-compatible vLLM endpoint.",
   "imageName": "runpod/pytorch:2.3.0-py3.11-cuda12.1.1-devel-ubuntu22.04",
   "gpuTypeId": "NVIDIA A100 80GB PCIe",
@@ -10,8 +10,8 @@
   "volumeMountPath": "/workspace",
   "ports": "8000/http",
   "env": {
-    "SUBTERRANEAN_BUILD_DIR": "/workspace/build/travel",
-    "SUBTERRANEAN_PORT": "8000",
+    "AGENT2MODEL_BUILD_DIR": "/workspace/build/travel",
+    "AGENT2MODEL_PORT": "8000",
     "HF_HOME": "/workspace/hf"
   },
   "dockerArgs": "bash -lc 'cd /workspace && bash setup.sh serve'"

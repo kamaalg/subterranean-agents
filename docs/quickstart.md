@@ -8,7 +8,7 @@ training and serving need a GPU (use [Modal](cloud.md) if you don't have one).
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install subterranean-agents              # core: compile + generate + eval
+pip install agent2model              # core: compile + generate + eval
 ```
 
 Optional extras (install only what you need):
@@ -22,7 +22,7 @@ Optional extras (install only what you need):
 | `openai` | OpenAI-compatible client for the served-model eval condition |
 
 ```bash
-pip install "subterranean-agents[train]"     # e.g. for local fine-tuning
+pip install "agent2model[train]"     # e.g. for local fine-tuning
 ```
 
 Set your Anthropic key (used by `generate` and `eval`):
@@ -37,7 +37,7 @@ Validate a workflow and emit the canonical IR. Works on a YAML flowchart or a
 `.py` file defining a LangGraph graph.
 
 ```bash
-subterranean compile examples/travel_booking/flowchart.yaml --out build/travel
+agent2model compile examples/travel_booking/flowchart.yaml --out build/travel
 ```
 
 This writes `build/travel/flowchart.json`. If the flowchart violates an invariant
@@ -52,7 +52,7 @@ is resumable (checkpoints to `build/travel/generation_state.json`), and stops if
 the `--budget` cap is hit.
 
 ```bash
-subterranean generate build/travel --n 2000 --model claude-sonnet-4-5 --budget 60
+agent2model generate build/travel --n 2000 --model claude-sonnet-4-5 --budget 60
 ```
 
 Output: `build/travel/dataset.jsonl` (HF chat-template) and
@@ -65,7 +65,7 @@ Full-parameter fine-tune a base model on the dataset. Pick a `--size` preset
 preset.
 
 ```bash
-subterranean train build/travel --base Qwen/Qwen2.5-3B-Instruct --size 3b --epochs 20
+agent2model train build/travel --base Qwen/Qwen2.5-3B-Instruct --size 3b --epochs 20
 ```
 
 The best checkpoint (by held-out eval loss, default 90/10 split) is saved to
@@ -78,7 +78,7 @@ Evaluate the compiled model against baselines on the 5-criterion rubric, with
 bootstrap CIs, significance tests, failure rates, and cost:
 
 ```bash
-subterranean eval build/travel --baselines in_context,langgraph --n 200
+agent2model eval build/travel --baselines in_context,langgraph --n 200
 ```
 
 Outputs `build/travel/eval_report.json` and `eval_report.pdf`. To include the
@@ -88,16 +88,16 @@ compiled model as a condition, serve it and pass `--served-url`. See the
 Serve the compiled model behind an OpenAI-compatible endpoint:
 
 ```bash
-subterranean serve build/travel --port 8000
+agent2model serve build/travel --port 8000
 # POST http://localhost:8000/v1/chat/completions
 ```
 
 ## No GPU? Reproduce on Modal
 
 ```bash
-pip install "subterranean-agents[cloud]"
-subterranean cloud setup   # one-time, idempotent
-modal run -m subterranean.cloud.modal_app::reproduce_travel
+pip install "agent2model[cloud]"
+agent2model cloud setup   # one-time, idempotent
+modal run -m agent2model.cloud.modal_app::reproduce_travel
 ```
 
 This runs generate → train → eval on Modal and produces a compiled 3B model

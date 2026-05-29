@@ -1,9 +1,9 @@
-"""Modal deployment recipes for the full subterranean pipeline (Phase 7).
+"""Modal deployment recipes for the full agent2model pipeline (Phase 7).
 
 This module exposes:
 
 * Five **worker functions** (``generate_data``, ``train_3b``, ``train_8b``,
-  ``evaluate``, ``serve``) parameterised by a :class:`~subterranean.cloud._recipes.Recipe`
+  ``evaluate``, ``serve``) parameterised by a :class:`~agent2model.cloud._recipes.Recipe`
   pydantic model. Modal cloudpickles Pydantic args fine, so the worker receives the
   full recipe — including the flowchart YAML text inline — without needing access
   to the caller's local filesystem.
@@ -13,7 +13,7 @@ This module exposes:
   Modal volumes.
 * Three **paper-reproduction** entrypoints (``reproduce_travel``,
   ``reproduce_zoom``, ``reproduce_insurance``) that are thin wrappers around
-  :func:`run` using the pre-built :data:`~subterranean.cloud._recipes.EXAMPLES`
+  :func:`run` using the pre-built :data:`~agent2model.cloud._recipes.EXAMPLES`
   recipes. Kept for backward compatibility with the published paper-repro docs.
 
 Why this module requires ``modal`` to import
@@ -22,8 +22,8 @@ A Modal app is defined declaratively: functions are decorated with
 ``@app.function(...)`` at module scope, which needs ``import modal`` at the top.
 So **this module deliberately requires ``modal``** and is not importable without
 the ``[cloud]`` extra. The rest of the package stays modal-free — ``import
-subterranean`` and ``import subterranean.cloud`` work without modal, and all the
-pure recipe logic lives in :mod:`subterranean.cloud._recipes` (no modal import),
+agent2model`` and ``import agent2model.cloud`` work without modal, and all the
+pure recipe logic lives in :mod:`agent2model.cloud._recipes` (no modal import),
 which is what the unit tests exercise. ``cloud/__init__.py`` does **not** import
 this module, keeping the import contract intact.
 
@@ -39,7 +39,7 @@ Layout on Modal
 * One secret: ``anthropic-secret`` providing ``ANTHROPIC_API_KEY`` to the
   API-bound functions.
 
-Entrypoints (``modal run -m subterranean.cloud.modal_app::<name>``):
+Entrypoints (``modal run -m agent2model.cloud.modal_app::<name>``):
 ``run`` (generic), ``reproduce_travel``, ``reproduce_zoom``, ``reproduce_insurance``.
 """
 
@@ -48,7 +48,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from subterranean.cloud._recipes import (
+from agent2model.cloud._recipes import (
     DEFAULT_BASE_FOR_SIZE,
     EXAMPLES,
     GPU_3B,
@@ -58,7 +58,7 @@ from subterranean.cloud._recipes import (
     build_training_config,
     get_recipe,
 )
-from subterranean.cloud.modal_app_constants import (
+from agent2model.cloud.modal_app_constants import (
     ANTHROPIC_SECRET,
     APP_NAME,
     BUILD_ROOT,
@@ -95,8 +95,8 @@ _HOUR = HOUR
 
 # Importing this triggers the @app.cls registration; do it after the app exists
 # so the class lands on the same App instance.
-from subterranean.cloud import _modal_serve  # noqa: E402  (intentional ordering)
-from subterranean.cloud._modal_serve import ServeCls  # noqa: E402
+from agent2model.cloud import _modal_serve  # noqa: E402  (intentional ordering)
+from agent2model.cloud._modal_serve import ServeCls  # noqa: E402
 
 _ = _modal_serve  # silence unused-import linters; we need the side effect
 
@@ -121,8 +121,8 @@ def _materialise_flowchart(recipe: Recipe) -> Path:
     """
     import json
 
-    from subterranean.ir.loader import load_flowchart_from_string
-    from subterranean.ir.validator import validate
+    from agent2model.ir.loader import load_flowchart_from_string
+    from agent2model.ir.validator import validate
 
     build = Path(_build_dir(recipe.name))
     build.mkdir(parents=True, exist_ok=True)
@@ -165,7 +165,7 @@ def generate_data(
 
     Materialises the recipe's flowchart YAML to ``<build>/flowchart.{yaml,json}``
     on the build volume, runs the async
-    :class:`~subterranean.generation.generator.ConversationGenerator`, and writes
+    :class:`~agent2model.generation.generator.ConversationGenerator`, and writes
     ``<build>/dataset.jsonl`` back to the volume. This step is API-bound (no GPU).
 
     Args:
@@ -180,16 +180,16 @@ def generate_data(
     """
     import asyncio
 
-    from subterranean.generation.formatter import write_dataset
-    from subterranean.generation.generator import (
+    from agent2model.generation.formatter import write_dataset
+    from agent2model.generation.generator import (
         DEFAULT_MODEL,
         ConversationGenerator,
         GenerationConfig,
     )
-    from subterranean.logging import logger
+    from agent2model.logging import logger
 
     build = _materialise_flowchart(recipe)
-    from subterranean.ir.loader import load_flowchart_from_string
+    from agent2model.ir.loader import load_flowchart_from_string
 
     flowchart = load_flowchart_from_string(recipe.flowchart_yaml)
     config = GenerationConfig(
@@ -214,8 +214,8 @@ def _run_training(recipe: Recipe, dataset_path: str | None = None) -> str:
 
     Loads the dataset from the build volume (default location, or the explicit
     ``dataset_path`` returned by :func:`generate_data`), builds the per-recipe
-    :class:`~subterranean.training.config.TrainingConfig` (3B single-GPU or 8B
-    ZeRO-3), trains via :func:`subterranean.training.trainer.train`, and persists
+    :class:`~agent2model.training.config.TrainingConfig` (3B single-GPU or 8B
+    ZeRO-3), trains via :func:`agent2model.training.trainer.train`, and persists
     the best checkpoint to the model volume.
 
     Args:
@@ -226,8 +226,8 @@ def _run_training(recipe: Recipe, dataset_path: str | None = None) -> str:
     Returns:
         The path to the best checkpoint on the model volume.
     """
-    from subterranean.logging import logger
-    from subterranean.training.trainer import train
+    from agent2model.logging import logger
+    from agent2model.training.trainer import train
 
     build = Path(_build_dir(recipe.name))
     dataset = Path(dataset_path) if dataset_path else build / "dataset.jsonl"
@@ -273,7 +273,7 @@ def train_8b(recipe: Recipe, dataset_path: str | None = None) -> str:
     """Fine-tune the 8B path on 8x A100 80GB with DeepSpeed ZeRO-3.
 
     The ZeRO-3 config ships at
-    :data:`subterranean.training.deepspeed.ZERO3_CONFIG_PATH`; the trainer wires
+    :data:`agent2model.training.deepspeed.ZERO3_CONFIG_PATH`; the trainer wires
     it through the multi-GPU :meth:`TrainingConfig.for_8b` preset.
 
     Args:
@@ -326,18 +326,18 @@ def evaluate(
         max_concurrent: Concurrent scenario evaluations.
 
     Returns:
-        The serialised :class:`~subterranean.eval.runner.EvalRunResult`.
+        The serialised :class:`~agent2model.eval.runner.EvalRunResult`.
     """
     import asyncio
 
-    from subterranean.eval.baselines import make_condition
-    from subterranean.eval.judge import Judge, JudgeConfig
-    from subterranean.eval.report import write_json_report, write_pdf_report
-    from subterranean.eval.runner import EvalConfig, EvalRunner
-    from subterranean.exceptions import EvalError
-    from subterranean.generation.generator import DEFAULT_MODEL
-    from subterranean.ir.loader import load_flowchart_from_string
-    from subterranean.logging import logger
+    from agent2model.eval.baselines import make_condition
+    from agent2model.eval.judge import Judge, JudgeConfig
+    from agent2model.eval.report import write_json_report, write_pdf_report
+    from agent2model.eval.runner import EvalConfig, EvalRunner
+    from agent2model.exceptions import EvalError
+    from agent2model.generation.generator import DEFAULT_MODEL
+    from agent2model.ir.loader import load_flowchart_from_string
+    from agent2model.logging import logger
 
     _ = model_path  # accepted for pipeline symmetry; eval consumes served_url
     build = _materialise_flowchart(recipe)
@@ -434,7 +434,7 @@ def _load_flowchart_yaml_text(path: Path) -> str:
         raise FileNotFoundError(f"No such flowchart: {path}")
     suffix = path.suffix.lower()
     if suffix == ".py":
-        from subterranean.adapters.langgraph import langgraph_to_yaml_text
+        from agent2model.adapters.langgraph import langgraph_to_yaml_text
 
         return langgraph_to_yaml_text(path)
     if suffix in {".yaml", ".yml"}:
@@ -488,7 +488,7 @@ def build_recipe_from_path(
 
     import yaml as _yaml
 
-    from subterranean.training.config import ModelSize
+    from agent2model.training.config import ModelSize
 
     size_lc = size.lower()
     if size_lc not in {"3b", "8b"}:
@@ -541,7 +541,7 @@ def run(
 
     Run with::
 
-        modal run -m subterranean.cloud.modal_app::run -- \\
+        modal run -m agent2model.cloud.modal_app::run -- \\
             --flowchart-path my_workflow.yaml --size 3b --n 2000 --epochs 20
 
     Args:
@@ -559,8 +559,8 @@ def run(
         yes: If True, skip the interactive cost-confirmation prompt. Required
             for non-interactive (CI) invocations.
     """
-    from subterranean.cloud._costs import confirm_cost_or_exit
-    from subterranean.logging import logger
+    from agent2model.cloud._costs import confirm_cost_or_exit
+    from agent2model.logging import logger
 
     recipe = build_recipe_from_path(
         flowchart_path,
@@ -602,8 +602,8 @@ def _reproduce(recipe: Recipe, *, yes: bool = False) -> dict[str, Any]:
     Returns:
         The serialised evaluation result for the run.
     """
-    from subterranean.cloud._costs import confirm_cost_or_exit
-    from subterranean.logging import logger
+    from agent2model.cloud._costs import confirm_cost_or_exit
+    from agent2model.logging import logger
 
     logger.info(f"Reproducing {recipe.name} ({recipe.size}) end to end on Modal.")
     confirm_cost_or_exit(recipe, yes=yes)
@@ -622,7 +622,7 @@ def _reproduce(recipe: Recipe, *, yes: bool = False) -> dict[str, Any]:
 def reproduce_travel(yes: bool = False) -> None:
     """Reproduce the Travel experiment (Qwen2.5-3B, ~2000 convos, 20 epochs).
 
-    Run with ``modal run -m subterranean.cloud.modal_app::reproduce_travel``.
+    Run with ``modal run -m agent2model.cloud.modal_app::reproduce_travel``.
 
     Args:
         yes: If True, skip the interactive cost-confirmation prompt.
@@ -634,7 +634,7 @@ def reproduce_travel(yes: bool = False) -> None:
 def reproduce_zoom(yes: bool = False) -> None:
     """Reproduce the Zoom experiment (Qwen3-8B, ~6000 convos, 10 epochs).
 
-    Run with ``modal run -m subterranean.cloud.modal_app::reproduce_zoom``.
+    Run with ``modal run -m agent2model.cloud.modal_app::reproduce_zoom``.
 
     Args:
         yes: If True, skip the interactive cost-confirmation prompt.
@@ -646,7 +646,7 @@ def reproduce_zoom(yes: bool = False) -> None:
 def reproduce_insurance(yes: bool = False) -> None:
     """Reproduce the Insurance experiment (Qwen3-8B, 55 nodes, ~3000 convos, 20 epochs).
 
-    Run with ``modal run -m subterranean.cloud.modal_app::reproduce_insurance``.
+    Run with ``modal run -m agent2model.cloud.modal_app::reproduce_insurance``.
 
     Args:
         yes: If True, skip the interactive cost-confirmation prompt.

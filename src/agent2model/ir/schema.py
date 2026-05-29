@@ -2,7 +2,7 @@
 
 The YAML format these models parse is the library's public contract; see the IR
 spec in the project README. Graph-level invariants (reachability, escape edges,
-etc.) are enforced separately by :mod:`subterranean.ir.validator` so that this
+etc.) are enforced separately by :mod:`agent2model.ir.validator` so that this
 module stays a pure structural description.
 """
 

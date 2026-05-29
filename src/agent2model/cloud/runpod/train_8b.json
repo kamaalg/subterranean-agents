@@ -1,5 +1,5 @@
 {
-  "name": "subterranean-train-8b",
+  "name": "agent2model-train-8b",
   "description": "Fine-tune the 8B path (Qwen3-8B) on 8x A100 80GB with DeepSpeed ZeRO-3.",
   "imageName": "runpod/pytorch:2.3.0-py3.11-cuda12.1.1-devel-ubuntu22.04",
   "gpuTypeId": "NVIDIA A100 80GB PCIe",
@@ -10,10 +10,10 @@
   "volumeMountPath": "/workspace",
   "ports": "22/tcp",
   "env": {
-    "SUBTERRANEAN_EXAMPLE": "zoom",
-    "SUBTERRANEAN_BASE_MODEL": "Qwen/Qwen3-8B",
-    "SUBTERRANEAN_EPOCHS": "10",
-    "SUBTERRANEAN_NUM_GPUS": "8",
+    "AGENT2MODEL_EXAMPLE": "zoom",
+    "AGENT2MODEL_BASE_MODEL": "Qwen/Qwen3-8B",
+    "AGENT2MODEL_EPOCHS": "10",
+    "AGENT2MODEL_NUM_GPUS": "8",
     "HF_HOME": "/workspace/hf"
   },
   "dockerArgs": "bash -lc 'cd /workspace && bash setup.sh train'"

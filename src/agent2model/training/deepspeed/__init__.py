@@ -2,7 +2,7 @@
 
 The 8B preset (``Qwen/Qwen3-8B``) trains across 8x A100 80GB with DeepSpeed
 ZeRO-3 (parameters, gradients, and optimizer state sharded across GPUs). The
-JSON config :mod:`subterranean.training.deepspeed.zero3` (file ``zero3.json``)
+JSON config :mod:`agent2model.training.deepspeed.zero3` (file ``zero3.json``)
 holds bf16 + ZeRO stage 3 defaults; most numeric fields are ``"auto"`` so
 ``accelerate``/transformers fill them from the ``SFTConfig`` at launch. The 3B
 preset runs on a single GPU and does not use DeepSpeed.

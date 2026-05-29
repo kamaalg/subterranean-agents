@@ -7,7 +7,7 @@ vLLM already ships a production-grade, OpenAI-compatible API server
 response shaping on top of ``AsyncLLMEngine`` + FastAPI, this module *drives that
 server*: it resolves the servable checkpoint inside a build directory, builds the
 exact ``argv`` the vLLM server's CLI parser expects, and hands it to vLLM's own
-entrypoint. This keeps subterranean's surface tiny and inherits OpenAI-API
+entrypoint. This keeps agent2model's surface tiny and inherits OpenAI-API
 fidelity (``/v1/chat/completions``, ``/v1/models``, streaming) for free.
 
 Import safety
@@ -16,7 +16,7 @@ vLLM only builds on CUDA/Linux, so it is **not** a core dependency and is **not*
 installed on developer machines (incl. this macOS box). Every ``vllm`` import is
 therefore performed lazily, inside the functions that need it. The module imports
 cleanly with only the core dependencies present, which is what the unit tests and
-``subterranean serve --help`` rely on.
+``agent2model serve --help`` rely on.
 
 The launch body (:func:`serve`) needs a GPU and a real vLLM install, so it runs
 on a GPU host / Modal (Phase 7), not in the local test suite. Everything else —
@@ -29,8 +29,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from subterranean.exceptions import ServingError
-from subterranean.logging import logger
+from agent2model.exceptions import ServingError
+from agent2model.logging import logger
 
 __all__ = [
     "BEST_SUBDIR",
@@ -43,7 +43,7 @@ BEST_SUBDIR = "best"
 """Name of the best-checkpoint subdirectory written by the training phase."""
 
 # Relative locations (most-specific first) where a servable checkpoint may live
-# under a build directory. ``subterranean train`` writes ``<build>/model/best``
+# under a build directory. ``agent2model train`` writes ``<build>/model/best``
 # (the CLI sets the trainer ``output_dir`` to ``<build>/model``); ``<build>/best``
 # is supported for builds that put the checkpoint directly under the build root.
 _CANDIDATE_SUBDIRS = (
@@ -84,7 +84,7 @@ def resolve_model_path(build_dir: str | Path) -> Path:
     Resolution order:
 
     1. ``<build_dir>/model/best`` — the best checkpoint written by
-       ``subterranean train`` — if it looks like a model directory.
+       ``agent2model train`` — if it looks like a model directory.
     2. ``<build_dir>/best`` — a checkpoint placed directly under the build root.
     3. ``<build_dir>`` itself, if it directly looks like a model directory.
 
@@ -105,7 +105,7 @@ def resolve_model_path(build_dir: str | Path) -> Path:
     root = Path(build_dir)
     if not root.exists():
         raise ServingError(
-            f"Build directory not found: {root}. Run `subterranean train {root}` first."
+            f"Build directory not found: {root}. Run `agent2model train {root}` first."
         )
 
     for parts in _CANDIDATE_SUBDIRS:
@@ -118,8 +118,8 @@ def resolve_model_path(build_dir: str | Path) -> Path:
     expected = root.joinpath(*_CANDIDATE_SUBDIRS[0])
     raise ServingError(
         f"No servable model found under {root}. Expected a checkpoint at "
-        f"{expected} (written by `subterranean train`) or a model directory at "
-        f"{root} (containing config.json + weights). Run `subterranean train` "
+        f"{expected} (written by `agent2model train`) or a model directory at "
+        f"{root} (containing config.json + weights). Run `agent2model train` "
         "first, or point at a model directory."
     )
 
@@ -264,6 +264,6 @@ def _run_vllm_server(args: list[str]) -> None:  # pragma: no cover - GPU host on
         except ImportError:
             from vllm.utils import FlexibleArgumentParser
 
-    parser = make_arg_parser(FlexibleArgumentParser(description="subterranean vLLM OpenAI server"))
+    parser = make_arg_parser(FlexibleArgumentParser(description="agent2model vLLM OpenAI server"))
     parsed = parser.parse_args(args)
     asyncio.run(run_server(parsed))
