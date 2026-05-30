@@ -154,15 +154,30 @@ def flowchart_from_stategraph(
 
     # Plain edges (set of (src, dst) tuples). START/END are sentinels, not real nodes.
     start_node: str | None = None
+    plain_edge_sources: set[str] = set()
     for src, dst in builder.edges:
         if src == START:
             start_node = dst
             continue
+        plain_edge_sources.add(src)
         if dst == END:
             terminal_ids.add(_terminal_id(dst, END))
             outgoing.setdefault(src, []).append(Edge(to=_terminal_id(dst, END)))
             continue
         outgoing.setdefault(src, []).append(Edge(to=dst))
+
+    # A node with BOTH a plain edge and conditional edges would become a decision
+    # node carrying an unconditional (when=None) branch alongside guarded ones —
+    # a contradiction the IR can't represent. LangGraph allows it; we reject it
+    # loudly rather than silently corrupt the procedure's routing.
+    mixed = plain_edge_sources & set(builder.branches)
+    if mixed:
+        raise FlowchartValidationError(
+            f"Node(s) {', '.join(sorted(mixed))} have both an unconditional edge and "
+            "conditional edges. A node must be either deterministic (one `add_edge`) or "
+            "a decision (`add_conditional_edges`), not both — split the logic into "
+            "separate nodes."
+        )
 
     # Conditional edges → decision branches keyed by path-map label.
     for src, branch_map in builder.branches.items():
@@ -226,19 +241,29 @@ def flowchart_from_stategraph(
         "conversations will be agent-only monologue. See docs/adapters.md."
     )
 
-    # All sinks default to `terminal: success` — structure can't reveal intent.
-    # Warn when a sink's id looks like an escalation/abandonment so the user
-    # retypes it (the eval failure-rate logic distinguishes terminal kinds).
-    suspect = [
-        tid
-        for tid in terminal_ids
-        if any(k in tid.lower() for k in ("escalat", "abandon", "fail", "reject", "deflect"))
-    ]
+    # All sinks default to `terminal: success` — structure can't reveal intent,
+    # and distinct logical endings (book / escalate / abandon) all collapse onto
+    # the single END terminal. Scan both terminal ids AND the names of nodes that
+    # lead to a terminal for escalation/abandonment cues, since the telltale name
+    # is usually on the predecessor (e.g. an `escalate` node → END), and warn so
+    # the user splits/retypes them (eval failure-rate depends on terminal kind).
+    _SINK_CUES = ("escalat", "abandon", "fail", "reject", "deflect", "giveup", "give_up")
+    terminal_predecessors = {
+        nid for nid, edges in outgoing.items() if any(e.to in terminal_ids for e in edges)
+    }
+    suspect = sorted(
+        {
+            name
+            for name in (terminal_ids | terminal_predecessors)
+            if any(cue in name.lower() for cue in _SINK_CUES)
+        }
+    )
     if suspect:
         logger.warning(
-            f"Terminal node(s) {', '.join(sorted(suspect))} were typed `terminal: success` "
-            "(LangGraph sinks carry no kind). If these are escalation/abandonment outcomes, "
-            "set their `terminal:` accordingly so evaluation failure rates are correct."
+            f"Node(s) {', '.join(suspect)} lead to a terminal typed `terminal: success` "
+            "(LangGraph END carries no kind, and all sinks collapse onto one terminal). "
+            "If these are escalation/abandonment outcomes, split them into distinct "
+            "terminals with the right `terminal:` kind so evaluation failure rates are correct."
         )
 
     return Flowchart(name=name, description=description, start=start_node, nodes=nodes)

@@ -14,5 +14,5 @@
     "AGENT2MODEL_PORT": "8000",
     "HF_HOME": "/workspace/hf"
   },
-  "dockerArgs": "bash -lc 'cd /workspace && bash setup.sh serve'"
+  "dockerArgs": "bash -lc 'cd /workspace && curl -fsSL https://raw.githubusercontent.com/kamaalg/agent2model/main/src/agent2model/cloud/runpod/setup.sh -o setup.sh && bash setup.sh serve'"
 }

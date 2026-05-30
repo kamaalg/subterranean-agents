@@ -103,13 +103,16 @@ You don't have to write YAML. If your procedure already lives in a **LangGraph
 the nodes, edges, and decision points into the IR for you:
 
 ```bash
-agent2model compile my_graph.py --out build/mine     # LangGraph → IR, automatically
+pip install "agent2model[langgraph]"                  # needed only to import a .py graph
+agent2model compile my_graph.py --out build/mine      # LangGraph → IR, automatically
 ```
 
-> The adapter recovers the procedure's *structure* (nodes/edges/branches); you fill
-> in node prompts and terminal types where they can't be inferred. **CrewAI Flows**
-> and **Oracle Agent Spec** import are on the near-term roadmap — the goal is that you
-> never hand-author a flowchart unless you want to.
+> Compiling a `.py` graph **imports and runs it** — only point `compile` at files
+> you trust (see [docs/adapters.md](https://github.com/kamaalg/agent2model/blob/main/docs/adapters.md)).
+> The adapter recovers the procedure's *structure* (nodes/edges/branches); you then fill
+> in node prompts and terminal types where they can't be inferred (`generate` will
+> refuse until the placeholder `TODO:` prompts are replaced). **CrewAI Flows** and
+> **Oracle Agent Spec** import are on the near-term roadmap.
 
 Prefer to author from scratch, or have no existing graph? Write the
 [Flowchart IR](#the-flowchart-ir) directly — it's a few lines of YAML.

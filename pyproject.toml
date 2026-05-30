@@ -110,6 +110,7 @@ path = "src/agent2model/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/agent2model"]
+exclude = ["**/__pycache__", "**/*.pyc", "**/*.pyo"]
 
 # Ship the paper-example flowcharts inside the wheel so the bundled recipes and
 # `reproduce_*` entrypoints work for a pip-installed user (no repo checkout).
@@ -124,6 +125,7 @@ include = [
     "LICENSE",
     "CHANGELOG.md",
 ]
+exclude = ["**/__pycache__", "**/*.pyc", "**/*.pyo"]
 
 # ----------------------------------------------------------------------------
 # Tooling

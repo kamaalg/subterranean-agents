@@ -156,10 +156,24 @@ def _cost_page(plt: Any, pdf: Any, conditions: Sequence[ConditionResult]) -> Non
     labels = [c.condition for c in conditions]
     per_convo = [(c.cost_usd / c.n_conversations if c.n_conversations else 0.0) for c in conditions]
     ax.bar(labels, per_convo, color="#2980b9")
-    ax.set_ylabel("Cost per conversation (USD)")
-    ax.set_title("Cost per conversation by condition")
+    ax.set_ylabel("API cost per conversation (USD)")
+    ax.set_title("API cost per conversation by condition")
     for i, v in enumerate(per_convo):
         ax.text(i, v, f"${v:.4f}", ha="center", va="bottom")
+    # Honesty: this measures Anthropic/OpenAI API spend only. The compiled
+    # condition's near-zero bar reflects judge/simulator API calls, NOT the
+    # self-hosted GPU inference cost — so this chart is not the paper's
+    # cost-reduction figure, which would require pricing GPU-hours per token.
+    ax.text(
+        0.5,
+        -0.18,
+        "API spend only — excludes self-hosted GPU inference cost for the compiled model.",
+        transform=ax.transAxes,
+        ha="center",
+        va="top",
+        fontsize=8,
+        color="#555555",
+    )
     fig.tight_layout()
     pdf.savefig(fig)
     plt.close(fig)

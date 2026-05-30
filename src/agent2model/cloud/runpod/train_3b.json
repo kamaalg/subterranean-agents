@@ -15,5 +15,5 @@
     "AGENT2MODEL_EPOCHS": "20",
     "HF_HOME": "/workspace/hf"
   },
-  "dockerArgs": "bash -lc 'cd /workspace && bash setup.sh train'"
+  "dockerArgs": "bash -lc 'cd /workspace && curl -fsSL https://raw.githubusercontent.com/kamaalg/agent2model/main/src/agent2model/cloud/runpod/setup.sh -o setup.sh && bash setup.sh train'"
 }

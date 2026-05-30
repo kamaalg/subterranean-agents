@@ -417,6 +417,12 @@ def eval(
     names = [b.strip() for b in baselines.split(",") if b.strip()]
     if served_url:
         names.append("compiled")
+    else:
+        logger.warning(
+            "No --served-url given: this run evaluates only the baselines and does NOT "
+            "score your compiled model. Start it with `agent2model serve <build_dir>` "
+            "(needs a GPU) and pass --served-url to include the 'compiled' condition."
+        )
     try:
         conditions = [make_condition(name, flowchart, served_url=served_url) for name in names]
     except EvalError as exc:

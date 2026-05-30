@@ -15,9 +15,17 @@ CLI command. Build artifacts live on the pod's persistent volume mounted at
 | `serve.json` | Single-GPU pod spec exposing the vLLM OpenAI endpoint on `:8000`. |
 | `setup.sh` | Installs the package and runs a stage: `generate`, `train`, `evaluate`, `serve`. |
 
-Each spec sets a `dockerArgs` that runs `bash setup.sh <stage>` from `/workspace`,
-and an `env` block of `AGENT2MODEL_*` variables the script reads (see the header
-comment in `setup.sh` for the full list).
+Each spec's `dockerArgs` first `curl`s `setup.sh` from this repo onto the pod
+(at `/workspace/setup.sh`) and then runs `bash setup.sh <stage>`, so the pod
+needs no pre-seeded files — only the `env` block of `AGENT2MODEL_*` variables the
+script reads (see the header comment in `setup.sh` for the full list). If your
+pod has no network egress to GitHub, upload `setup.sh` to `/workspace/` yourself
+and drop the `curl` from `dockerArgs`.
+
+> **Status:** the 3B path was verified end-to-end (on Modal; the RunPod specs
+> mirror it). The 8B 8×A100 ZeRO-3 RunPod spec (`train_8b.json`) is an
+> **unvalidated template** — the validated 8B path is Modal. Treat it as a
+> starting point and expect to tune it.
 
 ## Flow
 
