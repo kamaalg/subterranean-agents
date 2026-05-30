@@ -374,7 +374,7 @@ Build locally: `pip install -e ".[docs]" && mkdocs serve`.
 | LangGraph adapter (`.py` → IR)                             |   ✅   |
 | Synthetic data generation (async, prompt-cached, resumable)|   ✅   |
 | Full-parameter SFT (Qwen 3B + Qwen 8B ZeRO-3)              |   ✅   |
-| vLLM serving (OpenAI-compatible endpoint)                  |   ✅   |
+| vLLM serving (OpenAI-compatible endpoint)                  |   ⏳*  |
 | 5-criterion LLM-judge eval + user simulator + baselines    |   ✅   |
 | Bootstrap CIs, Wilcoxon/Mann-Whitney, Holm-Bonferroni      |   ✅   |
 | PDF eval report                                            |   ✅   |
@@ -382,6 +382,8 @@ Build locally: `pip install -e ".[docs]" && mkdocs serve`.
 | `cloud doctor` / `cloud setup` / cost-prompt UX            |   ✅   |
 | 3 paper reproductions ready to run                         |   ✅   |
 | Generic `cloud run` entrypoint for arbitrary workflows     |   ✅   |
+
+<sub>\* vLLM serving is container-verified (the model loads and the OpenAI routes register); the HTTP `/v1/chat/completions` path is pending end-to-end verification.</sub>
 
 ### The scope is the feature
 

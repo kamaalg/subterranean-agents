@@ -12,8 +12,8 @@
   "env": {
     "AGENT2MODEL_EXAMPLE": "zoom",
     "AGENT2MODEL_BASE_MODEL": "Qwen/Qwen3-8B",
+    "AGENT2MODEL_SIZE": "8b",
     "AGENT2MODEL_EPOCHS": "10",
-    "AGENT2MODEL_NUM_GPUS": "8",
     "HF_HOME": "/workspace/hf"
   },
   "dockerArgs": "bash -lc 'cd /workspace && bash setup.sh train'"

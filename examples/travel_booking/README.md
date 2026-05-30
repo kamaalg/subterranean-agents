@@ -6,7 +6,10 @@ escape paths to escalation and abandonment.
 
 This is the paper's **simple** procedure and the headline reproduction:
 `modal run -m agent2model.cloud.modal_app::reproduce_travel` trains a Qwen 2.5
-3B model that scores within 5% of the paper's Table 1.
+3B model. The **goal** is to land within 5% of the paper's Table 1; that
+reproduction has **not yet been run to completion in this repo** — the
+[`benchmarks/`](../../benchmarks) "Current" columns are still empty (`—`). This
+README will be updated with our measured numbers once the run completes.
 
 ## What it does
 

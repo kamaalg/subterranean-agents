@@ -1,16 +1,19 @@
 [build-system]
-requires = ["hatchling"]
+# >=1.27 is required for PEP 639 `license`/`license-files` (Metadata 2.4);
+# older hatchling emits metadata PyPI rejects.
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
 name = "agent2model"
 dynamic = ["version"]
-description = "Turn your LangGraph/CrewAI agent into a small fine-tuned model that runs with no orchestrator — near-frontier quality at a fraction of the inference cost."
+description = "Turn your LangGraph agent into a small fine-tuned model that runs with no orchestrator - near-frontier quality at a fraction of the inference cost."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
-authors = [{ name = "agent2model contributors" }]
+authors = [{ name = "Kamal Gurbanov", email = "kamalgurbanov916@gmail.com" }]
+maintainers = [{ name = "Kamal Gurbanov", email = "kamalgurbanov916@gmail.com" }]
 keywords = ["agent", "llm", "fine-tuning", "distillation", "langgraph", "crewai", "small-models", "inference-cost"]
 classifiers = [
     "Development Status :: 3 - Alpha",

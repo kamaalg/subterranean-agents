@@ -12,6 +12,7 @@
 #   AGENT2MODEL_EXAMPLE     example name / build subdir (default: travel)
 #   AGENT2MODEL_BUILD_DIR   build dir (default: /workspace/build/$AGENT2MODEL_EXAMPLE)
 #   AGENT2MODEL_BASE_MODEL  HF base model id (train)
+#   AGENT2MODEL_SIZE        training preset: 3b (single GPU) or 8b (ZeRO-3); default 3b
 #   AGENT2MODEL_EPOCHS      training epochs (train)
 #   AGENT2MODEL_N           conversations (generate) / scenarios (evaluate)
 #   AGENT2MODEL_BUDGET      USD hard cap for generate/evaluate
@@ -44,8 +45,12 @@ case "$STAGE" in
       --budget "${AGENT2MODEL_BUDGET:-60}"
     ;;
   train)
+    # --size selects the recipe: 3b (single GPU) or 8b (DeepSpeed ZeRO-3, which
+    # the CLI launches via `accelerate launch` across the pod's GPUs). Without it
+    # an 8B model would train on the single-GPU 3B preset and OOM.
     agent2model train "${BUILD_DIR}" \
       --base "${AGENT2MODEL_BASE_MODEL:-Qwen/Qwen2.5-3B-Instruct}" \
+      --size "${AGENT2MODEL_SIZE:-3b}" \
       --epochs "${AGENT2MODEL_EPOCHS:-20}"
     ;;
   evaluate)
