@@ -1,6 +1,6 @@
 # agent2model
 
-> Turn your LangGraph/CrewAI agent into a small open model that runs with **no orchestrator** — near-frontier quality at a fraction of the inference cost.
+> Turn your LangGraph agent into a small open model that runs with **no orchestrator** — near-frontier quality at a fraction of the inference cost.
 
 `agent2model` (PyPI: [`agent2model`](https://pypi.org/project/agent2model/))
 takes a procedural agent workflow — written as YAML or imported straight from a
