@@ -21,3 +21,6 @@ htmlcov/
 
 # OS
 .DS_Store
+
+# Local multi-agent review artifact (not shipped)
+PYPI_READINESS_REVIEW.md

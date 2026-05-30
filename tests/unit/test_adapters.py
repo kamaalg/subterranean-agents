@@ -219,6 +219,40 @@ app = _g.compile()
     assert isinstance(loaded, StateGraph)
 
 
+def test_loader_factory_with_annotated_state_schema(tmp_path: Path) -> None:
+    # Regression: a `build_graph()` factory whose state schema uses
+    # `Annotated[list, add_messages]` under `from __future__ import annotations`
+    # must resolve its string annotations against the still-imported module. A
+    # previous bug popped the module from sys.modules before calling the factory,
+    # raising a spurious `NameError: Annotated is not defined`. This is the
+    # dominant real-world LangGraph pattern (every ReAct/chatbot tutorial).
+    path = tmp_path / "annotated_graph.py"
+    path.write_text(
+        "from __future__ import annotations\n"
+        "from typing import Annotated, TypedDict\n"
+        "from langgraph.graph import StateGraph, START, END\n"
+        "from langgraph.graph.message import add_messages\n"
+        "\n"
+        "class State(TypedDict):\n"
+        "    messages: Annotated[list, add_messages]\n"
+        "\n"
+        "def _node(state):\n"
+        "    return state\n"
+        "\n"
+        "def build_graph():\n"
+        "    g = StateGraph(State)\n"
+        "    g.add_node('chat', _node)\n"
+        "    g.add_edge(START, 'chat')\n"
+        "    g.add_edge('chat', END)\n"
+        "    return g\n",
+        encoding="utf-8",
+    )
+    loaded = load_stategraph_from_pyfile(path)
+    fc = flowchart_from_stategraph(loaded, name="annotated")
+    validate(fc)
+    assert fc.start == "chat"
+
+
 def test_loader_no_graph_found(tmp_path: Path) -> None:
     path = tmp_path / "empty.py"
     path.write_text("X = 1\n")

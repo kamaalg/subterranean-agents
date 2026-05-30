@@ -9,9 +9,12 @@ constants as the rest of the cloud package. Importing this module requires
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import modal
+
+from agent2model import __version__
 
 APP_NAME = "agent2model"
 SERVE_APP = modal.App(APP_NAME)
@@ -19,12 +22,17 @@ SERVE_APP = modal.App(APP_NAME)
 # ----------------------------------------------------------------------------
 # Images
 #
-# Until ``agent2model`` is published to PyPI, ship the local source tree
-# into the image and pip-install it editable with the relevant extras. This is
-# the standard Modal dev pattern (see ``Image.add_local_dir``) and lets the same
-# Modal apps run unchanged once the package is published — just swap each image
-# to ``pip_install("agent2model[<extra>]")``.
+# Default: install the published package from PyPI
+# (``pip install agent2model[<extra>]==<version>``). This is what a pip user
+# gets and what the flagship ``modal run ...reproduce_travel`` demo relies on.
+#
+# Pre-publish / local development: set ``AGENT2MODEL_MODAL_LOCAL_SRC=1`` to ship
+# the working tree into the image and ``pip install -e`` it instead — useful
+# before the version is on PyPI or to test uncommitted changes from a checkout.
 # ----------------------------------------------------------------------------
+
+#: Use the local source tree instead of the published wheel (dev / pre-publish).
+_USE_LOCAL_SRC = os.environ.get("AGENT2MODEL_MODAL_LOCAL_SRC") == "1"
 
 #: Repo root, derived from this file's location (``src/agent2model/cloud/...``).
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -52,37 +60,50 @@ _IGNORE = [
 _CUDA_BASE = "nvidia/cuda:12.4.1-devel-ubuntu22.04"
 
 
-def _local_install_image(extra: str, *, gpu: bool) -> modal.Image:
-    """Build an image that pip-installs the local source with ``[extra]`` extras.
+def _base_image(*, gpu: bool) -> modal.Image:
+    """The base image: CUDA devel for GPU steps, lean Debian Slim otherwise."""
+    if gpu:
+        return modal.Image.from_registry(_CUDA_BASE, add_python="3.11")
+    return modal.Image.debian_slim(python_version="3.11")
+
+
+def _install_image(extra: str, *, gpu: bool) -> modal.Image:
+    """Build an image with ``agent2model[extra]`` installed.
+
+    By default installs the published wheel pinned to this package's version. With
+    ``AGENT2MODEL_MODAL_LOCAL_SRC=1`` it instead ships the working tree and
+    installs it editable (pre-publish / dev).
 
     Args:
         extra: pyproject extras group to install (``report``/``train``/``serve``).
         gpu: When True, base on the CUDA devel image so DeepSpeed/bitsandbytes/vLLM
             can compile their CUDA ops; when False, use the lean Debian Slim base.
     """
-    if gpu:
-        base = modal.Image.from_registry(_CUDA_BASE, add_python="3.11")
-    else:
-        base = modal.Image.debian_slim(python_version="3.11")
-    return base.add_local_dir(
-        _REPO_ROOT,
-        remote_path=_REMOTE_SRC,
-        copy=True,
-        ignore=_IGNORE,
-    ).run_commands(
+    base = _base_image(gpu=gpu)
+    if _USE_LOCAL_SRC:
+        return base.add_local_dir(
+            _REPO_ROOT,
+            remote_path=_REMOTE_SRC,
+            copy=True,
+            ignore=_IGNORE,
+        ).run_commands(
+            "pip install --upgrade pip",
+            f"pip install -e '{_REMOTE_SRC}[{extra}]'",
+        )
+    return base.run_commands(
         "pip install --upgrade pip",
-        f"pip install -e '{_REMOTE_SRC}[{extra}]'",
+        f"pip install 'agent2model[{extra}]=={__version__}'",
     )
 
 
 #: CPU image for the API-bound generate/evaluate steps (core + anthropic + matplotlib).
-CPU_IMAGE = _local_install_image("report", gpu=False)
+CPU_IMAGE = _install_image("report", gpu=False)
 
 #: Training image: heavy ML stack (torch/trl/deepspeed/bitsandbytes) on CUDA devel.
-TRAIN_IMAGE = _local_install_image("train", gpu=True)
+TRAIN_IMAGE = _install_image("train", gpu=True)
 
 #: Serving image: vLLM on CUDA devel (vLLM requires CUDA/Linux).
-SERVE_IMAGE = _local_install_image("serve", gpu=True)
+SERVE_IMAGE = _install_image("serve", gpu=True)
 
 #: Persisted build artifacts (flowchart IR, dataset.jsonl, eval reports).
 BUILD_VOLUME = modal.Volume.from_name("agent2model-build", create_if_missing=True)

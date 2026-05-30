@@ -195,7 +195,7 @@ def serve(
     model_path: str | Path,
     *,
     port: int = 8000,
-    host: str = "0.0.0.0",
+    host: str = "127.0.0.1",
     served_model_name: str | None = None,
     extra: list[str] | None = None,
 ) -> None:
@@ -211,7 +211,9 @@ def serve(
         model_path: Path to a loadable checkpoint directory (use
             :func:`resolve_model_path` to derive one from a build dir).
         port: TCP port to bind. Defaults to ``8000``.
-        host: Interface to bind. Defaults to ``"0.0.0.0"``.
+        host: Interface to bind. Defaults to ``"127.0.0.1"`` (local only) — the
+            endpoint is unauthenticated, so callers that need remote access (e.g.
+            the Modal serve container) must pass ``"0.0.0.0"`` explicitly.
         served_model_name: Public model id exposed via the API. Defaults to the
             model path when ``None``.
         extra: Additional raw vLLM CLI args appended to the server argv.
