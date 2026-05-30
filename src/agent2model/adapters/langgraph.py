@@ -153,11 +153,11 @@ def flowchart_from_stategraph(
     terminal_ids: set[str] = set()
 
     # Plain edges (set of (src, dst) tuples). START/END are sentinels, not real nodes.
-    start_node: str | None = None
+    start_candidates: list[str] = []
     plain_edge_sources: set[str] = set()
     for src, dst in builder.edges:
         if src == START:
-            start_node = dst
+            start_candidates.append(dst)
             continue
         plain_edge_sources.add(src)
         if dst == END:
@@ -165,6 +165,18 @@ def flowchart_from_stategraph(
             outgoing.setdefault(src, []).append(Edge(to=_terminal_id(dst, END)))
             continue
         outgoing.setdefault(src, []).append(Edge(to=dst))
+
+    # A single deterministic entry point is required. Multiple `add_edge(START, …)`
+    # would silently keep only one (a wrong, nondeterministic IR for a legal graph),
+    # so reject it rather than guess which entry the user meant.
+    unique_starts = sorted(set(start_candidates))
+    if len(unique_starts) > 1:
+        raise FlowchartValidationError(
+            f"LangGraph graph has multiple entry edges from START ({', '.join(unique_starts)}). "
+            "A compiled flowchart needs one deterministic entry node; route through a single "
+            "`add_edge(START, <node>)` (use a decision node if the entry branches)."
+        )
+    start_node: str | None = unique_starts[0] if unique_starts else None
 
     # A node with BOTH a plain edge and conditional edges would become a decision
     # node carrying an unconditional (when=None) branch alongside guarded ones —
@@ -240,6 +252,20 @@ def flowchart_from_stategraph(
         "`role: user` nodes. Add user nodes where the customer speaks, or generated "
         "conversations will be agent-only monologue. See docs/adapters.md."
     )
+
+    # Parallel fan-out (a node with >1 unconditional outgoing edge) runs all
+    # branches concurrently in LangGraph, but a sequential flowchart can only take
+    # one path — traversal will pick exactly one at random. Warn so the AND→XOR
+    # semantic change isn't silent (every other lossy case already warns).
+    fan_out = sorted(
+        nid for nid, edges in outgoing.items() if sum(1 for e in edges if e.when is None) > 1
+    )
+    if fan_out:
+        logger.warning(
+            f"Node(s) {', '.join(fan_out)} have multiple unconditional edges (parallel "
+            "fan-out in LangGraph). A flowchart takes one path at a time, so generation "
+            "will pick exactly ONE branch per walk, not run them concurrently."
+        )
 
     # All sinks default to `terminal: success` — structure can't reveal intent,
     # and distinct logical endings (book / escalate / abandon) all collapse onto

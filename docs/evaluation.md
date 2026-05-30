@@ -15,7 +15,9 @@ cap is hit.
 
 ## The rubric
 
-Five criteria, scored 1–5 with behavioral anchors (from the paper §3):
+Five criteria, scored 1–5 with behavioral anchors. The criteria follow the
+paper's §3; the 1/3/5 anchor wording is agent2model's own approximation of that
+scale (not a verbatim reprint):
 
 1. **Task Success** — did the agent execute the procedure correctly through to an
    appropriate terminal state?

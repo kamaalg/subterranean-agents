@@ -12,10 +12,13 @@ Reproduction numbers for `agent2model` against the paper
 arXiv:2605.22502v1). These tables track how close the library's compiled models
 get to the paper's published results.
 
-> **Status (2026-05):** the **Paper** columns are published targets. **Current**
-> columns are this repo's independently-reproduced numbers — being run now and
-> filled in as each reproduction completes. Until then, treat the cost/quality
-> headline as *the paper's claim we are reproducing*, not yet our verified result.
+> **Status (2026-05):** the **Paper** columns are the figures **as reported by
+> Dennis et al. 2026a**, transcribed here as reproduction targets — they are
+> **not independently verified by this project**, and we have not been able to
+> confirm the source numbers beyond the preprint itself. **Current** columns are
+> this repo's own reproduced numbers — being run now and filled in as each
+> reproduction completes. Until those land, treat every Paper figure as *an
+> unverified target we are working toward*, not a result this library has shown.
 
 The target numbers live in [`targets.json`](targets.json), which is the **single
 source of truth**: the end-to-end regression gate (`tests/e2e/`) reads it, the
