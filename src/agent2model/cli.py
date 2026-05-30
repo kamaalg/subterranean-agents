@@ -188,6 +188,14 @@ def generate(
     max_concurrent: Annotated[
         int, typer.Option("--max-concurrent", help="Maximum in-flight API calls.")
     ] = 10,
+    yes: Annotated[
+        bool,
+        typer.Option(
+            "--yes/--no-yes",
+            "-y",
+            help="Skip the cost-confirmation prompt (use for non-interactive runs).",
+        ),
+    ] = False,
 ) -> None:
     """Generate synthetic training data by walking the compiled flowchart.
 
@@ -228,6 +236,11 @@ def generate(
             f"Expected cost ~${expected:.2f} exceeds the ${budget:.2f} budget; "
             "generation may stop before completing all conversations."
         )
+    if not yes and not typer.confirm(
+        f"Proceed with generation (~${expected:.2f}, hard cap ${budget:.2f})?", default=True
+    ):
+        logger.info("Aborted before spending.")
+        raise typer.Exit(code=0)
 
     generator = ConversationGenerator(flowchart, config)
     try:
@@ -344,9 +357,10 @@ def eval(
         str,
         typer.Option(
             "--baselines",
-            help="Comma-separated baselines: in_context, langgraph, same_model_orch.",
+            help="Comma-separated baselines: in_context, langgraph, same_model_orch. "
+            "Note: the 'langgraph' baseline needs the [langgraph] extra.",
         ),
-    ] = "in_context,langgraph",
+    ] = "in_context",
     n: Annotated[int, typer.Option("--n", help="Scenarios per condition.")] = 200,
     judge_model: Annotated[
         str, typer.Option("--judge-model", help="Anthropic model id for the LLM judge.")
@@ -366,6 +380,14 @@ def eval(
     max_concurrent: Annotated[
         int, typer.Option("--max-concurrent", help="Concurrent scenario evaluations.")
     ] = 10,
+    yes: Annotated[
+        bool,
+        typer.Option(
+            "--yes/--no-yes",
+            "-y",
+            help="Skip the cost-confirmation prompt (use for non-interactive runs).",
+        ),
+    ] = False,
 ) -> None:
     """Evaluate a compiled model against baselines with the paper's rubric.
 
@@ -418,6 +440,11 @@ def eval(
             f"Expected cost ~${expected:.2f} exceeds the ${budget:.2f} budget; "
             "the run may stop before completing."
         )
+    if not yes and not typer.confirm(
+        f"Proceed with evaluation (~${expected:.2f}, hard cap ${budget:.2f})?", default=True
+    ):
+        logger.info("Aborted before spending.")
+        raise typer.Exit(code=0)
 
     runner = EvalRunner(flowchart, conditions, config, judge=Judge(config.judge))
     try:

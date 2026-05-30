@@ -226,6 +226,21 @@ def flowchart_from_stategraph(
         "conversations will be agent-only monologue. See docs/adapters.md."
     )
 
+    # All sinks default to `terminal: success` — structure can't reveal intent.
+    # Warn when a sink's id looks like an escalation/abandonment so the user
+    # retypes it (the eval failure-rate logic distinguishes terminal kinds).
+    suspect = [
+        tid
+        for tid in terminal_ids
+        if any(k in tid.lower() for k in ("escalat", "abandon", "fail", "reject", "deflect"))
+    ]
+    if suspect:
+        logger.warning(
+            f"Terminal node(s) {', '.join(sorted(suspect))} were typed `terminal: success` "
+            "(LangGraph sinks carry no kind). If these are escalation/abandonment outcomes, "
+            "set their `terminal:` accordingly so evaluation failure rates are correct."
+        )
+
     return Flowchart(name=name, description=description, start=start_node, nodes=nodes)
 
 
@@ -267,38 +282,47 @@ def load_stategraph_from_pyfile(path: Path) -> AnyStateGraph:
         raise FlowchartValidationError(f"Could not load Python module from {path}.")
 
     module = importlib.util.module_from_spec(spec)
+    # The module MUST stay in ``sys.modules`` for the whole of discovery, not just
+    # the exec: a factory like ``build_graph()`` that builds a StateGraph whose
+    # state schema uses ``Annotated[...]`` under ``from __future__ import
+    # annotations`` resolves those string annotations via the module's globals,
+    # which ``typing`` looks up through ``sys.modules``. Popping it before calling
+    # the factory caused a spurious ``NameError: Annotated is not defined``. We pop
+    # only in ``finally``, after a graph is found or discovery gives up.
     sys.modules[module_name] = module
     try:
-        spec.loader.exec_module(module)
-    except Exception as exc:
-        sys.modules.pop(module_name, None)
-        raise FlowchartValidationError(f"Failed to import LangGraph file {path}: {exc}") from exc
+        try:
+            spec.loader.exec_module(module)
+        except Exception as exc:
+            raise FlowchartValidationError(
+                f"Failed to import LangGraph file {path}: {exc}"
+            ) from exc
+
+        # 1) Zero-arg factory functions.
+        for factory_name in _FACTORY_NAMES:
+            factory = getattr(module, factory_name, None)
+            if callable(factory):
+                try:
+                    produced = factory()
+                except Exception as exc:
+                    raise FlowchartValidationError(
+                        f"Calling {factory_name}() in {path} raised: {exc}"
+                    ) from exc
+                graph = _as_stategraph(produced)
+                if graph is not None:
+                    logger.debug(f"Found graph via {factory_name}() in {path}.")
+                    return graph
+
+        # 2) Module-level variables.
+        for var_name in _VARIABLE_NAMES:
+            candidate = getattr(module, var_name, None)
+            if candidate is not None:
+                graph = _as_stategraph(candidate)
+                if graph is not None:
+                    logger.debug(f"Found graph via module variable '{var_name}' in {path}.")
+                    return graph
     finally:
         sys.modules.pop(module_name, None)
-
-    # 1) Zero-arg factory functions.
-    for factory_name in _FACTORY_NAMES:
-        factory = getattr(module, factory_name, None)
-        if callable(factory):
-            try:
-                produced = factory()
-            except Exception as exc:
-                raise FlowchartValidationError(
-                    f"Calling {factory_name}() in {path} raised: {exc}"
-                ) from exc
-            graph = _as_stategraph(produced)
-            if graph is not None:
-                logger.debug(f"Found graph via {factory_name}() in {path}.")
-                return graph
-
-    # 2) Module-level variables.
-    for var_name in _VARIABLE_NAMES:
-        candidate = getattr(module, var_name, None)
-        if candidate is not None:
-            graph = _as_stategraph(candidate)
-            if graph is not None:
-                logger.debug(f"Found graph via module variable '{var_name}' in {path}.")
-                return graph
 
     raise FlowchartValidationError(
         f"No LangGraph StateGraph found in {path}. Expose it as a module-level "

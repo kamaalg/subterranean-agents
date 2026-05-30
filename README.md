@@ -361,9 +361,9 @@ Build locally: `pip install -e ".[docs]" && mkdocs serve`.
 ## Project status
 
 - ✅ **All 8 phases complete** — IR, generation, LangGraph adapter, training, serving, eval, cloud, examples/docs/release
-- ✅ **314 unit tests passing**, `ruff` / `black` / `mypy --strict` clean
-- ✅ **Live verified end-to-end** — `compile`, `generate` (real Anthropic), `eval` (real harness with judge + simulator + baseline + stats + PDF)
-- ⏳ **Modal headline demo** — first real `modal run` validation in progress
+- ✅ **Unit tests passing**, `ruff` / `black` / `mypy --strict` clean
+- ✅ **Verified end-to-end** — `compile`, `generate` (real Anthropic), `eval` (real harness with judge + simulator + baseline + stats + PDF); 3B training verified on Modal
+- ⏳ **vLLM serving** — container-verified (model loads, OpenAI routes register); HTTP end-to-end pending
 - ⏳ **PyPI publish** — pending first paper-faithful reproduction
 
 ### What v1 ships

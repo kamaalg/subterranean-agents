@@ -199,7 +199,7 @@ def holm_bonferroni(pvalues: Sequence[float], *, alpha: float = 0.05) -> list[bo
 
     Example:
         >>> holm_bonferroni([0.01, 0.04, 0.03])
-        [True, False, True]
+        [True, False, False]
     """
     m = len(pvalues)
     if m == 0:

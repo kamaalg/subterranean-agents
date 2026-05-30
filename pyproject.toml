@@ -56,6 +56,14 @@ langgraph = [
     # (`agent2model compile graph.py`). Pure-YAML flowcharts need nothing here.
     "langgraph>=0.2",
 ]
+eval = [
+    # Everything the full eval harness can use: the PDF report (matplotlib),
+    # the OpenAI-compatible client for a served/compiled condition, and the
+    # LangGraph orchestrator baseline.
+    "matplotlib>=3.8",
+    "openai>=1.40",
+    "langgraph>=0.2",
+]
 docs = [
     "mkdocs>=1.6",
     "mkdocs-material>=9.5",
