@@ -1,4 +1,4 @@
-"""The paper's 5-criterion evaluation rubric (Dennis et al. 2026, §3).
+"""5-criterion evaluation rubric, modelled on Dennis et al. 2026, §3.
 
 This module encodes the rubric as a typed Pydantic structure so it can serve two
 masters at once:
@@ -8,8 +8,11 @@ masters at once:
 - as **data** for the report (criterion names, score scale, the rule that
   Graceful Handling is capped at 3 when the user posed no challenges).
 
-The behavioural anchors are ported verbatim from the plan file's Phase 6 section
-(which captured them from the paper's §3); they are not paraphrased from memory.
+Honesty note: the five criteria and the Graceful-Handling cap follow the paper,
+but the behavioural anchors below are **this library's own approximations** of
+the scale (levels 1/3/5), not a verbatim transcription of the paper's §3. They
+are intended to give the judge consistent, well-separated anchors; treat them as
+agent2model's rubric, refined against the paper rather than a faithful reprint.
 """
 
 from __future__ import annotations
@@ -81,7 +84,8 @@ class Criterion(BaseModel):
         return "\n".join(f"  {level} = {self.anchors[level]}" for level in sorted(self.anchors))
 
 
-# The five criteria, anchors verbatim from the plan's Phase 6 section.
+# The five criteria; anchors are agent2model's own 1/3/5 approximations of the
+# paper's scale (see the module docstring), not a verbatim reprint of §3.
 CRITERIA: tuple[Criterion, ...] = (
     Criterion(
         name="Task Success",

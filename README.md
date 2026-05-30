@@ -322,7 +322,8 @@ first-class artifact — is **measuring whether a model actually follows a
 multi-turn procedure.** The eval harness is a standalone, reproducible benchmark:
 
 - a **5-criterion LLM-judge rubric** (task success, information accuracy,
-  consistency, graceful handling, naturalness) with the paper's behavioral anchors;
+  consistency, graceful handling, naturalness) modelled on the paper's criteria,
+  with agent2model's own behavioral anchors;
 - a **dynamic user simulator** that role-plays customers with *no knowledge of the
   flowchart*, so scores reflect generalisation, not memorisation;
 - **baselines** in the same harness — in-context frontier, LangGraph orchestrator,
