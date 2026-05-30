@@ -29,7 +29,7 @@ Test tiers (see `pyproject.toml` markers):
 - **e2e** — full reproduction, compared to the paper; release candidates
   (`-m e2e`). Skipped unless `AGENT2MODEL_E2E=1` and a built model are present.
 
-Coding conventions (see `Claude.md` for the full list): Python 3.11+, modern type
+Coding conventions (see `CLAUDE.md` for the full list): Python 3.11+, modern type
 hints, Pydantic v2 for user-facing schemas, Typer for CLI, Loguru for logging,
 async + semaphores for batched API work, Google-style docstrings, no bare
 `# type: ignore`.

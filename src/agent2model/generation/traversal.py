@@ -14,6 +14,7 @@ runtime router; the compiled model self-orchestrates.
 from __future__ import annotations
 
 import random
+from collections import deque
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -48,6 +49,39 @@ class TraversalConfig(BaseModel):
 def _edge_key(src: str, edge: Edge) -> str:
     """Canonical ``"<from>-><to>"`` key for an edge weight lookup."""
     return f"{src}->{edge.to}"
+
+
+def _distance_to_terminal(flowchart: Flowchart) -> dict[str, int]:
+    """Shortest forward hop-distance from each node to its nearest terminal.
+
+    Computed by a reverse BFS seeded at every terminal node, so terminals get
+    distance ``0`` and every other node gets ``1 +`` the minimum distance of its
+    successors. Used to bias the late-walk toward terminals by *progress* rather
+    than only boosting edges that reach a terminal in a single hop — otherwise a
+    valid flowchart whose only escape is several hops away can exhaust
+    ``max_steps`` and raise a spurious "trap cycles" error.
+    """
+    # Reverse adjacency: predecessor -> list of nodes it has an edge to is the
+    # forward graph; we walk it backwards from terminals.
+    predecessors: dict[str, list[str]] = {nid: [] for nid in flowchart.nodes}
+    for src, node in flowchart.nodes.items():
+        for edge in node.next:
+            if edge.to in predecessors:
+                predecessors[edge.to].append(src)
+
+    distance: dict[str, int] = {}
+    queue: deque[str] = deque()
+    for nid, node in flowchart.nodes.items():
+        if node.is_terminal:
+            distance[nid] = 0
+            queue.append(nid)
+    while queue:
+        nid = queue.popleft()
+        for pred in predecessors[nid]:
+            if pred not in distance:
+                distance[pred] = distance[nid] + 1
+                queue.append(pred)
+    return distance
 
 
 def sample_path(
@@ -86,6 +120,7 @@ def sample_path(
         True
     """
     cfg = config or TraversalConfig()
+    distance = _distance_to_terminal(flowchart)
     path = [flowchart.start]
     current = flowchart.start
 
@@ -98,13 +133,15 @@ def sample_path(
                 f"node '{current}' is non-terminal but has no outgoing edges; "
                 "validate the flowchart before sampling"
             )
-        edge = _choose_edge(flowchart, current, node.next, rng, cfg, step)
+        edge = _choose_edge(flowchart, current, node.next, rng, cfg, step, distance)
         path.append(edge.to)
         current = edge.to
 
     raise FlowchartValidationError(
         f"path sampling exceeded max_steps={cfg.max_steps} without reaching a "
-        f"terminal (last node '{current}'); check the flowchart for trap cycles"
+        f"terminal (last node '{current}'); the flowchart may contain a cycle with "
+        "no escape edge toward a terminal (validate the flowchart first), or "
+        "max_steps is too low for its longest path"
     )
 
 
@@ -115,18 +152,25 @@ def _choose_edge(
     rng: random.Random,
     cfg: TraversalConfig,
     step: int,
+    distance: dict[str, int],
 ) -> Edge:
     """Pick one edge by weight, biasing toward terminals late in the walk.
 
-    Once the walk has taken more than half of ``max_steps``, edges leading
-    directly to a terminal node have their weight boosted so cyclic flowcharts
-    converge instead of looping until the hard cap.
+    Once the walk has taken more than half of ``max_steps``, edges that make
+    *progress* toward a terminal — i.e. whose target is strictly closer to a
+    terminal than the current node (by hop-distance) — have their weight boosted
+    so cyclic flowcharts converge instead of looping until the hard cap. Biasing
+    by distance, not just by "reaches a terminal in one hop", lets flowcharts
+    whose only escape is several hops away still terminate reliably.
     """
     bias_terminals = step > cfg.max_steps // 2
+    here = distance.get(src)
     weights: list[float] = []
     for edge in edges:
         weight = cfg.edge_weights.get(_edge_key(src, edge), cfg.default_weight)
-        if bias_terminals and flowchart.nodes[edge.to].is_terminal:
-            weight *= 10.0
+        if bias_terminals:
+            target = distance.get(edge.to)
+            if target is not None and (here is None or target < here):
+                weight *= 10.0
         weights.append(weight)
     return rng.choices(edges, weights=weights, k=1)[0]

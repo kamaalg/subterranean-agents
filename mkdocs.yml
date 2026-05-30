@@ -41,6 +41,7 @@ nav:
   - Home: index.md
   - Quickstart: quickstart.md
   - IR spec reference: ir-spec.md
+  - LangGraph adapter: adapters.md
   - Training guide: training.md
   - Evaluation guide: evaluation.md
   - Cloud quickstart: cloud-quickstart.md

@@ -542,18 +542,25 @@ class EvalRunner:
         progress: Progress,
         task: TaskID,
     ) -> tuple[list[JudgeVerdict], list[float]]:
-        """Run + judge every scenario for one condition; collect verdicts/timings."""
-        verdicts: list[JudgeVerdict] = []
-        wall: list[float] = []
+        """Run + judge every scenario for one condition; collect verdicts/timings.
 
-        async def worker(scenario: Scenario) -> None:
+        Results are returned **in scenario order**, not completion order: workers
+        run concurrently but :func:`asyncio.gather` preserves the order of the
+        awaitables it is given, and each worker returns its own result instead of
+        appending to a shared list. This alignment is load-bearing — the paired
+        Wilcoxon test in :func:`compare_conditions` zips conditions by index, so
+        index ``i`` must be the *same* scenario across every condition.
+        """
+
+        async def worker(scenario: Scenario) -> tuple[JudgeVerdict, float]:
             async with semaphore:
                 _, verdict, elapsed = await self._run_one(condition, scenario)
-            verdicts.append(verdict)
-            wall.append(elapsed)
             progress.advance(task)
+            return verdict, elapsed
 
-        await asyncio.gather(*(worker(s) for s in scenarios))
+        pairs = await asyncio.gather(*(worker(s) for s in scenarios))
+        verdicts = [verdict for verdict, _ in pairs]
+        wall = [elapsed for _, elapsed in pairs]
         return verdicts, wall
 
     async def run(self) -> EvalRunResult:

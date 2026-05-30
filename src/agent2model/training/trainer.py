@@ -23,6 +23,7 @@ from __future__ import annotations
 import inspect
 import json
 import math
+import os
 import random
 import shutil
 from pathlib import Path
@@ -269,6 +270,24 @@ def _adapt_sft_kwargs(sft_config_cls: type, kwargs: dict[str, Any]) -> dict[str,
     return adapted
 
 
+def _is_main_process() -> bool:
+    """True on the global rank-0 process (or any non-distributed run).
+
+    Under ``accelerate launch``/DeepSpeed each GPU runs its own process; only the
+    main one should perform filesystem side effects like copying the best
+    checkpoint, to avoid races.
+    """
+    return os.environ.get("RANK", "0") == "0"
+
+
+def _world_size() -> int:
+    """Number of distributed processes (1 when not launched distributed)."""
+    try:
+        return int(os.environ.get("WORLD_SIZE", "1"))
+    except ValueError:
+        return 1
+
+
 def _require_train_deps() -> None:
     """Verify the heavy ML stack is importable, else raise a helpful error.
 
@@ -314,6 +333,18 @@ def train(config: TrainingConfig, dataset_path: str | Path) -> CheckpointInfo:
     reject_lora(use_lora=config.use_lora)
     _require_train_deps()
 
+    # The 8B preset needs DeepSpeed ZeRO-3 sharded across GPUs; running it as a
+    # single process silently falls back to no sharding and OOMs. Route it through
+    # `accelerate launch` (agent2model.training.launch.launch_training), which
+    # sets WORLD_SIZE > 1 in each worker.
+    if config.size == "8b" and _world_size() <= 1:
+        raise RuntimeError(
+            "8B training must run under `accelerate launch` with DeepSpeed ZeRO-3 "
+            "(WORLD_SIZE > 1); a single process will OOM. Use "
+            "`agent2model.training.launch.launch_training(config, dataset)` (the CLI "
+            "and Modal `train_8b` already do this) instead of calling `train` directly."
+        )
+
     # Lazy heavy imports — never executed at module import time.
     from datasets import Dataset
     from trl import SFTConfig, SFTTrainer
@@ -351,8 +382,10 @@ def train(config: TrainingConfig, dataset_path: str | Path) -> CheckpointInfo:
     logger.info(f"Best checkpoint: {best.path} (eval_loss={best.eval_loss}).")
 
     best_dir = out_root / "best"
-    if best_dir.exists():
-        shutil.rmtree(best_dir)
-    shutil.copytree(best.path, best_dir)
-    logger.info(f"Copied best checkpoint to {best_dir}.")
+    # Only the main process touches the filesystem under a distributed launch.
+    if _is_main_process():
+        if best_dir.exists():
+            shutil.rmtree(best_dir)
+        shutil.copytree(best.path, best_dir)
+        logger.info(f"Copied best checkpoint to {best_dir}.")
     return best.model_copy(update={"path": str(best_dir)})

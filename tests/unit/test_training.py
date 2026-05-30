@@ -11,7 +11,9 @@ from __future__ import annotations
 
 import json
 import math
+import subprocess
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -265,6 +267,52 @@ def test_launch_8b_custom_deepspeed_config() -> None:
     cfg = TrainingConfig.for_8b("out")
     cmd = build_accelerate_command(cfg, "train.py", deepspeed_config="/custom/zero.json")
     assert "/custom/zero.json" in cmd
+
+
+def test_build_accelerate_command_module_form_with_args() -> None:
+    cfg = TrainingConfig.for_8b("out")
+    cmd = build_accelerate_command(
+        cfg,
+        "agent2model.training._entry",
+        as_module=True,
+        script_args=["--config", "c.json", "--dataset", "d.jsonl"],
+    )
+    assert "-m" in cmd
+    assert cmd[cmd.index("-m") + 1] == "agent2model.training._entry"
+    assert cmd[-4:] == ["--config", "c.json", "--dataset", "d.jsonl"]
+
+
+def test_launch_training_3b_runs_in_process(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # 3B must train in-process (no subprocess / accelerate launch).
+    from agent2model.training import launch, trainer
+
+    sentinel = CheckpointInfo(step=1, path="best", eval_loss=0.5)
+    calls: list[tuple[Any, Any]] = []
+
+    def _fake_train(config: Any, dataset: Any) -> Any:
+        calls.append((config, dataset))
+        return sentinel
+
+    monkeypatch.setattr(trainer, "train", _fake_train)
+    cfg = TrainingConfig.for_3b(str(tmp_path / "model"))
+    out = launch.launch_training(cfg, tmp_path / "dataset.jsonl")
+    assert out is sentinel
+    assert len(calls) == 1
+
+
+def test_launch_training_8b_failure_raises(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # 8B routes through a subprocess; a non-zero exit must raise RuntimeError.
+    from agent2model.training import launch
+
+    class _Result:
+        returncode = 1
+
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: _Result())
+    cfg = TrainingConfig.for_8b(str(tmp_path / "model"), num_gpus=2)
+    with pytest.raises(RuntimeError, match="8B training launch failed"):
+        launch.launch_training(cfg, tmp_path / "dataset.jsonl")
 
 
 def test_zero3_config_is_valid_json_stage3() -> None:

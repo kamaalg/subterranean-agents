@@ -228,7 +228,7 @@ def _run_training(recipe: Recipe, dataset_path: str | None = None) -> str:
         The path to the best checkpoint on the model volume.
     """
     from agent2model.logging import logger
-    from agent2model.training.trainer import train
+    from agent2model.training.launch import launch_training
 
     build = Path(_build_dir(recipe.name))
     dataset = Path(dataset_path) if dataset_path else build / "dataset.jsonl"
@@ -239,7 +239,9 @@ def _run_training(recipe: Recipe, dataset_path: str | None = None) -> str:
         f"Training {recipe.name} ({config.size}): base={config.base_model}, "
         f"epochs={config.epochs}, gpus={config.num_gpus}."
     )
-    best = train(config, dataset)
+    # 3B trains in-process; 8B is launched under `accelerate launch` + DeepSpeed
+    # ZeRO-3 across the GPUs (launch_training handles the routing).
+    best = launch_training(config, dataset)
     MODEL_VOLUME.commit()
     logger.info(f"Best checkpoint: {best.path} (eval_loss={best.eval_loss}).")
     return best.path

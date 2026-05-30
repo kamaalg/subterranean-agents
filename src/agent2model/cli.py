@@ -15,16 +15,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import subprocess
 from pathlib import Path
 from typing import Annotated, Any
 
 import typer
 
-from agent2model.adapters.langgraph import (
-    flowchart_from_stategraph,
-    load_stategraph_from_pyfile,
-)
 from agent2model.exceptions import (
     FlowchartValidationError,
     GenerationBudgetExceeded,
@@ -60,12 +57,46 @@ cloud_app = typer.Typer(
 app.add_typer(cloud_app, name="cloud")
 
 
+def _version_callback(value: bool) -> None:
+    """Print the installed version and exit (eager ``--version``)."""
+    if value:
+        from agent2model import __version__
+
+        typer.echo(f"agent2model {__version__}")
+        raise typer.Exit()
+
+
 @app.callback()
 def _main(
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Enable DEBUG logging.")] = False,
+    version: Annotated[
+        bool,
+        typer.Option(
+            "--version",
+            help="Show the agent2model version and exit.",
+            callback=_version_callback,
+            is_eager=True,
+        ),
+    ] = False,
 ) -> None:
     """Configure global logging before any command runs."""
     configure_logging(verbose=verbose)
+
+
+def _require_anthropic_key() -> None:
+    """Exit early with a clear message if no Anthropic API key is configured.
+
+    Both ``generate`` and ``eval`` make Anthropic calls; without a key the SDK
+    raises a raw traceback only *after* we have printed a cost estimate and
+    started a progress bar. Fail fast and friendly instead.
+    """
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        logger.error(
+            "ANTHROPIC_API_KEY is not set. Export your Anthropic API key first, e.g.\n"
+            "    export ANTHROPIC_API_KEY=sk-ant-...\n"
+            "Get a key at https://console.anthropic.com/."
+        )
+        raise typer.Exit(code=1)
 
 
 @app.command()
@@ -85,6 +116,12 @@ def compile(
     """
     try:
         if source.suffix == ".py":
+            # Imported lazily so the CLI works without the optional langgraph extra.
+            from agent2model.adapters.langgraph import (
+                flowchart_from_stategraph,
+                load_stategraph_from_pyfile,
+            )
+
             graph = load_stategraph_from_pyfile(source)
             flowchart = flowchart_from_stategraph(graph, name=source.stem)
         else:
@@ -106,6 +143,24 @@ def compile(
     logger.info(
         f"Compiled '{flowchart.name}': {n_nodes} nodes, {n_terminals} terminals → {ir_path}"
     )
+
+    # Surface data-quality gaps the user must fix before generating (especially
+    # for LangGraph-derived IR): placeholder TODO prompts and missing user turns.
+    n_todo = sum(
+        1
+        for node in flowchart.nodes.values()
+        if node.prompt is not None and node.prompt.strip().startswith("TODO:")
+    )
+    if n_todo:
+        logger.warning(
+            f"{n_todo} node(s) still have placeholder 'TODO:' prompts. Replace them with "
+            f"real instructions in {ir_path} before running `agent2model generate`."
+        )
+    if not any(node.role == "user" for node in flowchart.nodes.values()):
+        logger.warning(
+            "No `role: user` nodes found; generated conversations would be agent-only "
+            "monologue. Add user nodes where the customer speaks."
+        )
 
 
 def _load_compiled_flowchart(build_dir: Path) -> Flowchart:
@@ -141,12 +196,27 @@ def generate(
     and writes the HF chat-template dataset to ``<BUILD_DIR>/dataset.jsonl``.
     Generation is resumable and stops if the ``--budget`` cap is reached.
     """
+    _require_anthropic_key()
     try:
         flowchart = _load_compiled_flowchart(build_dir)
     except FlowchartValidationError as exc:
         for line in exc.errors:
             logger.error(line)
         raise typer.Exit(code=1) from exc
+
+    # Refuse to spend money turning placeholder prompts into garbage data.
+    todo_nodes = [
+        nid
+        for nid, node in flowchart.nodes.items()
+        if node.prompt is not None and node.prompt.strip().startswith("TODO:")
+    ]
+    if todo_nodes:
+        logger.error(
+            f"{len(todo_nodes)} node(s) still have placeholder 'TODO:' prompts "
+            f"({', '.join(todo_nodes[:5])}{'…' if len(todo_nodes) > 5 else ''}). "
+            "Replace them with real instructions before generating data."
+        )
+        raise typer.Exit(code=1)
 
     config = GenerationConfig(
         n=n, model=model, budget_usd=budget, seed=seed, max_concurrent=max_concurrent
@@ -244,12 +314,13 @@ def train(
     )
     if size == "8b":
         logger.info(
-            f"8B uses DeepSpeed ZeRO-3 across {config.num_gpus} GPUs "
-            "(launch via `accelerate launch`, e.g. on a Modal 8x A100 host)."
+            f"8B uses DeepSpeed ZeRO-3 across {config.num_gpus} GPUs, launched via "
+            "`accelerate launch` (run this on an 8x A100-class host)."
         )
 
     # Lazy import: keeps `agent2model train --help` working without the ML stack.
-    from agent2model.training.trainer import train as run_training
+    # launch_training trains 3B in-process and launches 8B under accelerate+ZeRO-3.
+    from agent2model.training.launch import launch_training as run_training
 
     try:
         best = run_training(config, dataset_path)
@@ -313,6 +384,7 @@ def eval(
     from agent2model.eval.runner import EvalConfig, EvalRunner, estimate_eval_cost
     from agent2model.exceptions import EvalBudgetExceeded, EvalError
 
+    _require_anthropic_key()
     try:
         flowchart = _load_compiled_flowchart(build_dir)
     except FlowchartValidationError as exc:
@@ -372,7 +444,14 @@ def serve(
         typer.Argument(help="Build directory holding the compiled model (or a model dir)."),
     ],
     port: Annotated[int, typer.Option("--port", help="TCP port to bind.")] = 8000,
-    host: Annotated[str, typer.Option("--host", help="Interface to bind.")] = "0.0.0.0",
+    host: Annotated[
+        str,
+        typer.Option(
+            "--host",
+            help="Interface to bind. Defaults to 127.0.0.1 (local only); the endpoint "
+            "is unauthenticated, so use 0.0.0.0 only on a trusted network.",
+        ),
+    ] = "127.0.0.1",
     model_name: Annotated[
         str | None,
         typer.Option("--model-name", help="Public model id exposed via the API."),
@@ -565,6 +644,15 @@ def cloud_run(
     if not resolved.exists():
         logger.error(f"No such flowchart: {resolved}")
         raise typer.Exit(code=1)
+
+    if name is not None:
+        from agent2model.cloud._recipes import validate_recipe_name
+
+        try:
+            validate_recipe_name(name)
+        except ValueError as exc:
+            logger.error(str(exc))
+            raise typer.Exit(code=2) from exc
 
     argv = _build_modal_run_argv(
         resolved,

@@ -20,9 +20,16 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install build tooling
-        run: python -m pip install --upgrade build
+        run: python -m pip install --upgrade build twine
       - name: Build sdist + wheel
         run: python -m build
+      - name: Check distribution metadata + README rendering
+        run: python -m twine check dist/*
+      - name: Smoke-test the built wheel
+        run: |
+          python -m pip install dist/*.whl
+          agent2model --version
+          agent2model --help
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -35,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/project/subterranean-agents/
+      url: https://pypi.org/project/agent2model/
     permissions:
       # Required for PyPI Trusted Publishing (OIDC); no token secret needed.
       id-token: write

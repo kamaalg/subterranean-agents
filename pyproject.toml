@@ -4,20 +4,25 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agent2model"
-version = "0.1.0.dev0"
+dynamic = ["version"]
 description = "Turn your LangGraph/CrewAI agent into a small fine-tuned model that runs with no orchestrator — near-frontier quality at a fraction of the inference cost."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [{ name = "agent2model contributors" }]
 keywords = ["agent", "llm", "fine-tuning", "distillation", "langgraph", "crewai", "small-models", "inference-cost"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: Apache Software License",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
 ]
 dependencies = [
     "pydantic>=2.6",
@@ -45,6 +50,11 @@ cloud = [
 ]
 serve = [
     "vllm>=0.5",
+]
+langgraph = [
+    # Optional: only needed to compile FROM a LangGraph `.py` graph
+    # (`agent2model compile graph.py`). Pure-YAML flowcharts need nothing here.
+    "langgraph>=0.2",
 ]
 docs = [
     "mkdocs>=1.6",
@@ -81,9 +91,28 @@ agent2model = "agent2model.cli:app"
 Homepage = "https://github.com/kamaalg/agent2model"
 Documentation = "https://kamaalg.github.io/agent2model"
 Repository = "https://github.com/kamaalg/agent2model"
+Issues = "https://github.com/kamaalg/agent2model/issues"
+Changelog = "https://github.com/kamaalg/agent2model/blob/main/CHANGELOG.md"
+
+[tool.hatch.version]
+path = "src/agent2model/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/agent2model"]
+
+# Ship the paper-example flowcharts inside the wheel so the bundled recipes and
+# `reproduce_*` entrypoints work for a pip-installed user (no repo checkout).
+[tool.hatch.build.targets.wheel.force-include]
+"examples" = "agent2model/_examples"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/agent2model",
+    "examples",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+]
 
 # ----------------------------------------------------------------------------
 # Tooling
@@ -154,8 +183,8 @@ branch = true
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.1.0.dev0"
-version_files = ["pyproject.toml:^version"]
+version = "0.1.0"
+version_files = ["src/agent2model/__init__.py:__version__"]
 tag_format = "v$version"
 update_changelog_on_bump = true
 changelog_incremental = true

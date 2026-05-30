@@ -28,10 +28,11 @@ entrypoints work the same way the generic ``run`` does.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from agent2model.training.config import (
     DEFAULT_3B_MODEL,
@@ -57,7 +58,35 @@ __all__ = [
     "n_gpus_for_size",
     "pipeline_steps",
     "training_function_for_size",
+    "validate_recipe_name",
 ]
+
+#: A recipe name becomes a subdirectory on the build/model volumes and is
+#: interpolated into container paths, so it must be a safe slug — no path
+#: separators, no ``..`` traversal, no whitespace or shell metacharacters.
+_SLUG_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+
+
+def validate_recipe_name(name: str) -> str:
+    """Validate that ``name`` is a safe slug for use in volume/container paths.
+
+    Args:
+        name: The candidate recipe name.
+
+    Returns:
+        ``name`` unchanged when valid.
+
+    Raises:
+        ValueError: If ``name`` is empty, ``.``/``..``, or contains anything
+            outside ``[A-Za-z0-9._-]`` (which could escape the build directory).
+    """
+    if not name or name in {".", ".."} or not _SLUG_RE.match(name):
+        raise ValueError(
+            f"Invalid recipe name {name!r}: use only letters, digits, '.', '_', '-' "
+            "(no path separators or '..')."
+        )
+    return name
+
 
 #: GPU spec strings, in Modal's ``gpu=`` notation, for each training path.
 GPU_3B = "A100-80GB"
@@ -129,6 +158,11 @@ class Recipe(BaseModel):
     gen_budget_usd: float = Field(default=80.0, gt=0.0)
     eval_budget_usd: float = Field(default=60.0, gt=0.0)
 
+    @field_validator("name")
+    @classmethod
+    def _validate_name(cls, value: str) -> str:
+        return validate_recipe_name(value)
+
 
 #: Backward-compatible alias. ``Recipe`` replaces the old ``ExampleRecipe``
 #: class; the alias is kept so tests and downstream code that imported the old
@@ -148,7 +182,12 @@ EXAMPLE_FLOWCHART_DIRS: dict[str, str] = {
 # into a Modal image) the ``examples`` directory is not shipped — we therefore
 # read the YAML eagerly here, so the bytes travel with the recipe.
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-_EXAMPLES_DIR = _REPO_ROOT / "examples"
+#: Candidate locations for the example flowcharts, in priority order:
+#: 1. The repo checkout (``<repo>/examples``) — editable installs / source tree.
+#: 2. The packaged copy shipped inside the wheel (``agent2model/_examples``, via
+#:    the ``force-include`` in pyproject) — pip installs with no repo checkout.
+_PACKAGED_EXAMPLES_DIR = Path(__file__).resolve().parent.parent / "_examples"
+_EXAMPLES_DIRS = (_REPO_ROOT / "examples", _PACKAGED_EXAMPLES_DIR)
 
 
 def _load_example_flowchart_yaml(example: str) -> str:
@@ -166,9 +205,10 @@ def _load_example_flowchart_yaml(example: str) -> str:
         The YAML text.
     """
     sub = EXAMPLE_FLOWCHART_DIRS[example]
-    path = _EXAMPLES_DIR / sub / "flowchart.yaml"
-    if path.exists():
-        return path.read_text(encoding="utf-8")
+    for base in _EXAMPLES_DIRS:
+        path = base / sub / "flowchart.yaml"
+        if path.exists():
+            return path.read_text(encoding="utf-8")
     # Placeholder so the Recipe still validates (flowchart_yaml is non-empty).
     # The Modal workers will write this YAML to the build volume; if the user
     # is running a paper reproduction from a wheel install they should clone

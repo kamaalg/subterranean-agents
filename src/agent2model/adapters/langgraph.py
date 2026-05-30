@@ -43,18 +43,40 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+import uuid
 from pathlib import Path
 from typing import Any
 
 import yaml
-from langgraph.graph import END, START, StateGraph
 
 from agent2model.exceptions import FlowchartValidationError
 from agent2model.ir.schema import Edge, Flowchart, Node
 from agent2model.logging import logger
 
-AnyStateGraph = StateGraph[Any, Any, Any, Any]
-"""``StateGraph`` with its generic state/context/input/output params erased."""
+#: Alias for a LangGraph ``StateGraph`` in type signatures. ``langgraph`` is an
+#: optional extra (``pip install 'agent2model[langgraph]'``) imported lazily
+#: inside the functions below, so the rest of the package — and the whole CLI —
+#: works without it installed. We keep this as ``Any`` rather than the real
+#: generic type so nothing in this module forces a top-level langgraph import.
+AnyStateGraph = Any
+
+
+def _import_langgraph() -> tuple[Any, Any, Any]:
+    """Import langgraph lazily, returning ``(END, START, StateGraph)``.
+
+    Raises:
+        FlowchartValidationError: With an install hint if the optional
+            ``langgraph`` extra is not installed.
+    """
+    try:
+        from langgraph.graph import END, START, StateGraph
+    except ImportError as exc:  # pragma: no cover - depends on optional extra
+        raise FlowchartValidationError(
+            "Converting a LangGraph graph requires the optional 'langgraph' extra, "
+            "which is not installed. Install it with: pip install 'agent2model[langgraph]'."
+        ) from exc
+    return END, START, StateGraph
+
 
 TODO_PROMPT = "TODO: describe what the agent should do at this step."
 """Placeholder prompt for every agent node; the user replaces it with real instructions."""
@@ -63,12 +85,13 @@ _FACTORY_NAMES = ("build_graph", "make_graph", "create_graph")
 _VARIABLE_NAMES = ("graph", "app", "workflow")
 
 
-def _as_stategraph(obj: Any) -> AnyStateGraph | None:
+def _as_stategraph(obj: Any) -> Any:
     """Return the underlying :class:`StateGraph` for ``obj``, or ``None``.
 
     Accepts a ``StateGraph`` directly or a compiled graph (which exposes the
     builder as ``.builder``).
     """
+    _, _, StateGraph = _import_langgraph()
     if isinstance(obj, StateGraph):
         return obj
     builder = getattr(obj, "builder", None)
@@ -77,9 +100,9 @@ def _as_stategraph(obj: Any) -> AnyStateGraph | None:
     return None
 
 
-def _terminal_id(raw: str) -> str:
+def _terminal_id(raw: str, end_sentinel: Any) -> str:
     """Map LangGraph's ``END`` sentinel to a friendly IR terminal id."""
-    return "end" if raw == END else raw
+    return "end" if raw == end_sentinel else raw
 
 
 def flowchart_from_stategraph(
@@ -115,6 +138,7 @@ def flowchart_from_stategraph(
         >>> fc.start
         'triage'
     """
+    END, START, _ = _import_langgraph()
     builder = _as_stategraph(graph)
     if builder is None:
         raise FlowchartValidationError(
@@ -135,8 +159,8 @@ def flowchart_from_stategraph(
             start_node = dst
             continue
         if dst == END:
-            terminal_ids.add(_terminal_id(dst))
-            outgoing.setdefault(src, []).append(Edge(to=_terminal_id(dst)))
+            terminal_ids.add(_terminal_id(dst, END))
+            outgoing.setdefault(src, []).append(Edge(to=_terminal_id(dst, END)))
             continue
         outgoing.setdefault(src, []).append(Edge(to=dst))
 
@@ -160,7 +184,7 @@ def flowchart_from_stategraph(
                     f"{src}', router, {{'label': 'target_node'}})."
                 )
             for label, target in ends.items():
-                resolved = _terminal_id(target) if target == END else target
+                resolved = _terminal_id(target, END) if target == END else target
                 if target == END:
                     terminal_ids.add(resolved)
                 outgoing.setdefault(src, []).append(Edge(to=resolved, when=label))
@@ -183,6 +207,25 @@ def flowchart_from_stategraph(
         f"Converted StateGraph '{name}': {len(builder.nodes)} graph nodes, "
         f"{len(decision_sources)} decision nodes, {len(terminal_ids)} terminals."
     )
+
+    # Structural conversion cannot recover prompts or user turns. Warn loudly so
+    # the user edits the IR before spending money generating data: otherwise every
+    # agent node carries a TODO placeholder (which would be sent verbatim to the
+    # generator) and there are no `role: user` nodes (so generated conversations
+    # would be agent monologue, not dialogue).
+    n_todo = sum(1 for node in nodes.values() if node.prompt == TODO_PROMPT)
+    if n_todo:
+        logger.warning(
+            f"{n_todo} agent node(s) have placeholder TODO prompts. Edit the compiled "
+            "flowchart and replace every 'TODO:' prompt with real instructions before "
+            "running `agent2model generate`."
+        )
+    logger.warning(
+        "LangGraph graphs carry no user turns, so the converted flowchart has no "
+        "`role: user` nodes. Add user nodes where the customer speaks, or generated "
+        "conversations will be agent-only monologue. See docs/adapters.md."
+    )
+
     return Flowchart(name=name, description=description, start=start_node, nodes=nodes)
 
 
@@ -211,7 +254,14 @@ def load_stategraph_from_pyfile(path: Path) -> AnyStateGraph:
     if not path.exists():
         raise FlowchartValidationError(f"No such file: {path}")
 
-    module_name = f"_agent2model_lg_{path.stem}"
+    # SECURITY: importing the module executes arbitrary Python from ``path``.
+    # Only run LangGraph files you trust. Surfaced as a warning so it is never
+    # silent. A unique module name avoids clobbering anything in ``sys.modules``.
+    logger.warning(
+        f"Importing and executing Python from {path} to load its LangGraph graph. "
+        "Only run files you trust."
+    )
+    module_name = f"_agent2model_lg_{path.stem}_{uuid.uuid4().hex}"
     spec = importlib.util.spec_from_file_location(module_name, path)
     if spec is None or spec.loader is None:
         raise FlowchartValidationError(f"Could not load Python module from {path}.")

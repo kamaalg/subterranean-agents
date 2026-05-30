@@ -6,10 +6,10 @@
 
 [![CI](https://github.com/kamaalg/agent2model/actions/workflows/ci.yml/badge.svg)](https://github.com/kamaalg/agent2model/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
-[![License: Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-green.svg)](https://github.com/kamaalg/agent2model/blob/main/LICENSE)
 [![Status](https://img.shields.io/badge/status-alpha-orange.svg)](#what-v1-ships)
 
-*Point `agent2model` at an agent procedure (a LangGraph graph, or a YAML flowchart) and it bakes the whole procedure into a small model's **weights** — so the model self-orchestrates with no runtime orchestrator and no per-turn frontier calls. **Near-frontier quality at 128–462× lower inference cost.***
+*Point `agent2model` at an agent procedure (a LangGraph graph, or a YAML flowchart) and it bakes the whole procedure into a small model's **weights** — so the model self-orchestrates with no runtime orchestrator and no per-turn frontier calls. The method reports **near-frontier quality at 128–462× lower inference cost** ([Dennis et al. 2026](https://arxiv.org/abs/2605.22502)); those are the paper's figures, not yet independently reproduced in this repo — see [Benchmarks](#benchmarks).*
 
 </div>
 
@@ -67,19 +67,25 @@ Based on Dennis et al. 2026, *Compiling Agentic Workflows into LLM Weights*
 ## The 4-command pipeline
 
 ```bash
-# 1. Validate a workflow and emit the canonical IR.
+# 1. Validate a workflow and emit the canonical IR.   [free, offline, no GPU]
 agent2model compile examples/travel_booking/flowchart.yaml --out build/travel
 
-# 2. Generate synthetic training conversations via Claude.
+# 2. Generate synthetic training conversations via Claude.  [Anthropic API $; --budget caps it]
 agent2model generate build/travel --n 2000 --budget 60
 
-# 3. Fine-tune Qwen 2.5/3 on the generated data.
+# 3. Fine-tune Qwen 2.5/3 on the generated data.      [needs a GPU + the [train] extra]
 agent2model train build/travel --base Qwen/Qwen2.5-3B-Instruct --epochs 20
 
-# 4. Evaluate against baselines, then serve via vLLM.
+# 4. Evaluate against baselines, then serve via vLLM.  [eval = Anthropic API $; serve needs a GPU]
 agent2model eval  build/travel --baselines in_context,langgraph --n 200
 agent2model serve build/travel --port 8000
 ```
+
+> **Cost/hardware at a glance:** `compile` is free and offline. `generate` and
+> `eval` make Anthropic API calls (each prints an estimate first and is capped by
+> `--budget`). `train` and `serve` need a GPU — locally with the `[train]`/`[serve]`
+> extras, or on Modal (below) if you have no GPU. A full paper reproduction
+> (generate → train → eval) runs ~$30–50 end-to-end.
 
 Don't have a GPU? **The whole pipeline runs on Modal:**
 
@@ -114,14 +120,14 @@ Prefer to author from scratch, or have no existing graph? Write the
 
 > These are the **paper's** published targets, reproduced here as the benchmark we
 > hold ourselves to. Independently-reproduced numbers (this repo, your hardware) are
-> tracked in [`benchmarks/`](benchmarks/) — see [Benchmarks & reproduction](#benchmarks).
+> tracked in [`benchmarks/`](https://github.com/kamaalg/agent2model/tree/main/benchmarks) — see [Benchmarks & reproduction](#benchmarks).
 
 Compiled small models vs. frontier baselines, n=200 conversations per condition,
 scored 1–5 on each of 5 criteria.
 
 ### Travel booking (3B, 14 nodes)
 
-| Criterion          | agent2model 3B | Same-model orch. | LangGraph | In-context (Sonnet) |
+| Criterion          | agent2model 3B (paper) | Same-model orch. | LangGraph | In-context (Sonnet) |
 |--------------------|----------------:|-----------------:|----------:|--------------------:|
 | Task Success       | **4.11**        | 3.93             | 4.17      | 4.53                |
 | Information Acc.   | **4.75**        | 4.69             | 4.21      | 4.64                |
@@ -131,13 +137,15 @@ scored 1–5 on each of 5 criteria.
 
 ### Cost per conversation
 
-| Domain                 | In-context Sonnet | LangGraph | **agent2model** | Reduction |
+| Domain                 | In-context Sonnet | LangGraph | agent2model (paper target) | Reduction |
 |------------------------|------------------:|----------:|-----------------:|----------:|
 | Travel (14 nodes)      | $0.133            | $0.077    | **$0.0010**      | **128×**  |
 | Zoom Support (14)      | $0.103            | $0.054    | **$0.0003**      | **296×**  |
 | Insurance Claims (55+) | $0.327            | $0.174    | **$0.0007**      | **462×**  |
 
-→ **87–98% of frontier quality at a fraction of a percent of the cost.**
+→ The paper reports **87–98% of frontier quality at a fraction of a percent of the cost.**
+These figures are from Dennis et al. 2026; this repo's own reproduced numbers live in
+[`benchmarks/`](https://github.com/kamaalg/agent2model/blob/main/benchmarks) and are still being filled in.
 
 ---
 
@@ -211,24 +219,33 @@ build/travel/
 
 ## Install
 
-### Local (no GPU): for `compile`, `generate`, `eval`, the cloud CLI
-
 ```bash
-pip install -e ".[dev]"
+pip install agent2model
 ```
 
-### Local with GPU: add the training stack
+That core install is enough to `compile` a flowchart, `generate` data, and `eval`
+(no GPU needed). Pull in extras for the heavier paths:
 
 ```bash
-pip install -e ".[dev,train]"     # torch + trl + transformers + deepspeed
+pip install "agent2model[train]"      # torch + trl + transformers + deepspeed (GPU)
+pip install "agent2model[serve]"      # vLLM OpenAI-compatible serving (GPU/Linux)
+pip install "agent2model[cloud]"      # Modal cloud recipes
+pip install "agent2model[langgraph]"  # compile FROM a LangGraph .py graph
 ```
 
-### Cloud-first (recommended for most users)
+### Cloud-first (no local GPU)
 
 ```bash
-pip install -e ".[cloud]"
+pip install "agent2model[cloud]"
 agent2model cloud setup           # wizard: Modal account, token, anthropic-secret
 agent2model cloud doctor          # checklist; tells you what's missing
+```
+
+### From source (development)
+
+```bash
+git clone https://github.com/kamaalg/agent2model && cd agent2model
+pip install -e ".[dev]"
 ```
 
 ---
@@ -245,7 +262,7 @@ modal run -m agent2model.cloud.modal_app::reproduce_insurance    # 8B, 55+ nodes
 
 Each chains generate → train → evaluate end-to-end and writes a PDF report.
 The CI gate fails any release whose numbers regress > 5% below
-[`benchmarks/targets.json`](benchmarks/targets.json).
+[`benchmarks/targets.json`](https://github.com/kamaalg/agent2model/blob/main/benchmarks/targets.json).
 
 ---
 
@@ -318,8 +335,8 @@ agent2model eval build/travel --baselines in_context,langgraph,same_model_orch -
 ```
 
 The live leaderboard (compiled-3B/8B vs. every baseline, reproduced on real
-hardware) lives in [`benchmarks/`](benchmarks/). Paper targets are in
-[`benchmarks/targets.json`](benchmarks/targets.json); a release is blocked if any
+hardware) lives in [`benchmarks/`](https://github.com/kamaalg/agent2model/tree/main/benchmarks). Paper targets are in
+[`benchmarks/targets.json`](https://github.com/kamaalg/agent2model/blob/main/benchmarks/targets.json); a release is blocked if any
 measured criterion regresses > 5% below target.
 
 ---
@@ -328,14 +345,14 @@ measured criterion regresses > 5% below target.
 
 | Page                                              | What it covers                                  |
 |---------------------------------------------------|------------------------------------------------|
-| [Quickstart](docs/quickstart.md)                  | First 10 minutes, end-to-end                   |
-| [Cloud Quickstart](docs/cloud-quickstart.md)      | Brutally explicit cloud prereqs + costs        |
-| [IR Spec Reference](docs/ir-spec.md)              | Every field of the flowchart YAML              |
-| [Training Guide](docs/training.md)                | Hyperparameters, GPU sizing, DeepSpeed         |
-| [Evaluation Guide](docs/evaluation.md)            | The 5-criterion rubric, baselines, stats       |
-| [Cloud Deployment](docs/cloud.md)                 | Modal recipes + RunPod templates               |
-| [Troubleshooting](docs/troubleshooting.md)        | Common errors and fixes                        |
-| [FAQ](docs/faq.md)                                | What it does, what it doesn't, edge cases      |
+| [Quickstart](https://github.com/kamaalg/agent2model/blob/main/docs/quickstart.md)                  | First 10 minutes, end-to-end                   |
+| [Cloud Quickstart](https://github.com/kamaalg/agent2model/blob/main/docs/cloud-quickstart.md)      | Brutally explicit cloud prereqs + costs        |
+| [IR Spec Reference](https://github.com/kamaalg/agent2model/blob/main/docs/ir-spec.md)              | Every field of the flowchart YAML              |
+| [Training Guide](https://github.com/kamaalg/agent2model/blob/main/docs/training.md)                | Hyperparameters, GPU sizing, DeepSpeed         |
+| [Evaluation Guide](https://github.com/kamaalg/agent2model/blob/main/docs/evaluation.md)            | The 5-criterion rubric, baselines, stats       |
+| [Cloud Deployment](https://github.com/kamaalg/agent2model/blob/main/docs/cloud.md)                 | Modal recipes + RunPod templates               |
+| [Troubleshooting](https://github.com/kamaalg/agent2model/blob/main/docs/troubleshooting.md)        | Common errors and fixes                        |
+| [FAQ](https://github.com/kamaalg/agent2model/blob/main/docs/faq.md)                                | What it does, what it doesn't, edge cases      |
 
 Build locally: `pip install -e ".[docs]" && mkdocs serve`.
 
@@ -395,7 +412,7 @@ Three test tiers:
 - **`integration`** — real Anthropic API, tiny budget, nightly CI (`pytest -m integration`)
 - **`e2e`** — full reproduction on Modal, release gate (`pytest -m e2e`)
 
-CI workflow: [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+CI workflow: [`.github/workflows/ci.yml`](https://github.com/kamaalg/agent2model/blob/main/.github/workflows/ci.yml).
 
 ---
 
@@ -418,5 +435,5 @@ If you use this library, please cite the paper it reproduces:
 
 ## License
 
-[Apache-2.0](LICENSE) © 2026 agent2model contributors
+[Apache-2.0](https://github.com/kamaalg/agent2model/blob/main/LICENSE) © 2026 agent2model contributors
 

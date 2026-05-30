@@ -14,7 +14,10 @@ agent frameworks (LangGraph, CrewAI) that run the procedure live every turn,
 weights.
 
 Based on Dennis et al. 2026, *Compiling Agentic Workflows into LLM Weights*
-(arXiv:2605.22502): near-frontier quality at **128–462× lower inference cost**.
+(arXiv:2605.22502), which reports near-frontier quality at **128–462× lower
+inference cost**. Those are the paper's figures; this repo's own
+independently-reproduced numbers are tracked in the benchmarks and are still
+being filled in.
 
 ## The idea
 

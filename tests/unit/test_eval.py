@@ -6,6 +6,7 @@ paths and asserts the user simulator carries zero flowchart knowledge.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
 from typing import Any
@@ -458,6 +459,46 @@ async def test_runner_budget_guard(flowchart: Flowchart) -> None:
     runner = EvalRunner(flowchart, [condition], config, judge=judge, simulator_client=sim_client)
     with pytest.raises(EvalBudgetExceeded):
         await runner.run()
+
+
+class _FakeProgress:
+    """Minimal stand-in for rich.Progress exposing only ``advance``."""
+
+    def advance(self, task: Any) -> None:
+        pass
+
+
+async def test_run_condition_suite_preserves_scenario_order(flowchart: Flowchart) -> None:
+    # Regression: workers complete out of scenario order (scenario 0 finishes
+    # last here), but the returned verdicts/timings must be aligned to scenario
+    # order — otherwise the paired Wilcoxon test zips mismatched scenarios across
+    # conditions and every p-value is silently wrong.
+    config = EvalConfig(n=5, budget_usd=100, max_concurrent=5, max_turns=4)
+    runner = EvalRunner(
+        flowchart,
+        [],
+        config,
+        judge=Judge(JudgeConfig(), client=_Client(["x"], judge_reply=_VERDICT_JSON)),
+    )
+    scenarios = [{"idx": i} for i in range(5)]
+
+    async def fake_run_one(condition: Any, scenario: Any) -> Any:
+        idx = scenario["idx"]
+        # Earlier scenarios sleep longer -> reversed completion order.
+        await asyncio.sleep((len(scenarios) - idx) * 0.005)
+        return None, _verdict(**{"Task Success": idx}), float(idx)
+
+    runner._run_one = fake_run_one  # type: ignore[method-assign]
+    sem = asyncio.Semaphore(5)
+    verdicts, wall = await runner._run_condition_suite(
+        None,  # type: ignore[arg-type]
+        scenarios,  # type: ignore[arg-type]
+        sem,
+        _FakeProgress(),  # type: ignore[arg-type]
+        None,  # type: ignore[arg-type]
+    )
+    assert [v.scores["Task Success"] for v in verdicts] == [0, 1, 2, 3, 4]
+    assert wall == [0.0, 1.0, 2.0, 3.0, 4.0]
 
 
 # --------------------------------------------------------------------------- #

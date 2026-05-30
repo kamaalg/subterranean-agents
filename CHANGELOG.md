@@ -9,7 +9,9 @@ by [commitizen](https://commitizen-tools.github.io/commitizen/) (`cz bump`) from
 
 <!-- cz-changelog-insertion-marker -->
 
-## Unreleased
+## 0.1.0
+
+First public release.
 
 ### Added
 
