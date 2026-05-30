@@ -1,5 +1,5 @@
 site_name: agent2model
-site_description: Turn your LangGraph/CrewAI agent into a small model that runs with no orchestrator — near-frontier quality at a fraction of the inference cost.
+site_description: Turn your LangGraph agent into a small model that runs with no orchestrator — near-frontier quality at a fraction of the inference cost.
 repo_url: https://github.com/kamaalg/agent2model
 repo_name: kamaalg/agent2model
 docs_dir: docs

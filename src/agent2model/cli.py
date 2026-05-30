@@ -43,7 +43,7 @@ from agent2model.training.config import DENNIS_2026B, TrainingConfig
 
 app = typer.Typer(
     name="agent2model",
-    help="Turn your LangGraph/CrewAI agent into a small model that runs with no orchestrator.",
+    help="Turn your LangGraph agent into a small model that runs with no orchestrator.",
     no_args_is_help=True,
     add_completion=False,
 )
